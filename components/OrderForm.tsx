@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Divider } from "@/components/Decorative";
 import {
   PRICES,
@@ -111,8 +111,11 @@ export default function OrderForm() {
     });
   }
 
-  // Today's date in YYYY-MM-DD for min attribute
-  const todayStr = new Date().toISOString().split("T")[0];
+  // Today's date in YYYY-MM-DD for min attribute — computed client-side only to avoid hydration mismatch
+  const [todayStr, setTodayStr] = useState("");
+  useEffect(() => {
+    setTodayStr(new Date().toISOString().split("T")[0]);
+  }, []);
 
   function validate(): FieldError {
     const e: FieldError = {};
@@ -549,7 +552,7 @@ function Field({
 
 function ErrorMsg({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-im-fell italic text-red-600 text-sm mt-1">{children}</p>
+    <span className="block font-im-fell italic text-red-600 text-sm mt-1">{children}</span>
   );
 }
 
