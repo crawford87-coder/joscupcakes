@@ -22,6 +22,7 @@ interface FormState {
   email: string;
   phone: string;
   pickupDate: string;
+  pickupTime: string;
   fulfillment: Fulfillment;
   deliveryAddress: string;
   deliveryZip: string;
@@ -41,6 +42,7 @@ const INITIAL: FormState = {
   email: "",
   phone: "",
   pickupDate: "",
+  pickupTime: "",
   fulfillment: "pickup",
   deliveryAddress: "",
   deliveryZip: "",
@@ -123,6 +125,7 @@ export default function OrderForm() {
     if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       e.email = "Valid email is required.";
     if (!form.phone.trim()) e.phone = "Phone is required.";
+    if (!form.pickupTime) e.pickupTime = "Please choose a preferred time.";
     if (!form.pickupDate) {
       e.pickupDate = "Pickup date is required.";
     } else if (!isPickupDateValid(form.pickupDate, form.quantity)) {
@@ -178,6 +181,7 @@ export default function OrderForm() {
           topper: form.topper,
           topperDescription: form.topper ? form.topperDescription : null,
           sprinklesOrGlitter: form.extras || null,
+          pickupTime: form.pickupTime || null,
           notes: form.notes || null,
           totalPrice: total,
         }),
@@ -469,6 +473,25 @@ export default function OrderForm() {
             className={inputCls(!!errors.pickupDate)}
           />
         </Field>
+
+        {/* Preferred time */}
+        <fieldset>
+          <legend className="font-im-fell-sc text-plum text-sm tracking-wide mb-2">
+            Preferred time <span className="text-rose ml-1">*</span>
+          </legend>
+          {errors.pickupTime && <ErrorMsg>{errors.pickupTime}</ErrorMsg>}
+          <div className="grid grid-cols-3 gap-3 mt-2">
+            {(["9 am – 12 pm", "12 pm – 3 pm", "3 pm – 6 pm"] as const).map((slot) => (
+              <RadioCard
+                key={slot}
+                selected={form.pickupTime === slot}
+                onClick={() => set("pickupTime", slot)}
+              >
+                <span className="font-im-fell italic text-plum text-sm text-center">{slot}</span>
+              </RadioCard>
+            ))}
+          </div>
+        </fieldset>
       </fieldset>
 
       <Divider />

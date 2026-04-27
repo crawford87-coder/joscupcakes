@@ -22,6 +22,7 @@ create table if not exists orders (
   sprinkles_or_glitter text check (sprinkles_or_glitter in ('sprinkles', 'glitter', null)),
   notes text,
   total_price numeric(10,2) not null,
+  pickup_time text,
   status text default 'new' check (status in ('new', 'confirmed', 'in_progress', 'ready', 'delivered', 'cancelled'))
 );
 
@@ -49,3 +50,8 @@ create policy "Service role can insert orders"
 create index if not exists orders_pickup_date_idx on orders (pickup_date asc);
 create index if not exists orders_status_idx on orders (status);
 create index if not exists orders_created_at_idx on orders (created_at desc);
+
+-- ============================================================
+-- Migration: run this if the orders table already exists
+-- ============================================================
+alter table orders add column if not exists pickup_time text;

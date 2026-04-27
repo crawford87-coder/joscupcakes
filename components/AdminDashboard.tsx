@@ -30,6 +30,7 @@ interface Order {
   sprinkles_or_glitter: string | null;
   notes: string | null;
   total_price: number;
+  pickup_time: string | null;
   status: Status;
 }
 
@@ -294,6 +295,9 @@ export default function AdminDashboard({ orders: initialOrders }: { orders: Orde
                         </div>
                         <div className="space-y-2">
                           <Detail label="Fulfillment" value={order.fulfillment_type} />
+                          {order.pickup_time && (
+                            <Detail label="Preferred time" value={order.pickup_time} />
+                          )}
                           {order.delivery_address && (
                             <Detail label="Address" value={order.delivery_address} />
                           )}

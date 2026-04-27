@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
       customerEmail,
       customerPhone,
       pickupDate,
+      pickupTime,
       fulfillmentType,
       deliveryAddress,
       quantity,
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
       topper_description: topperDescription ?? null,
       sprinkles_or_glitter: sprinklesOrGlitter ?? null,
       notes: notes ?? null,
+      pickup_time: pickupTime ?? null,
       total_price: totalPrice,
       status: "new",
     });
