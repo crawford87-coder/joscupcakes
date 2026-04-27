@@ -162,7 +162,7 @@ export default function AdminDashboard({ orders: initialOrders }: { orders: Orde
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="font-im-fell-sc text-plum text-xs">From</span>
           <input
             type="date"
@@ -180,8 +180,8 @@ export default function AdminDashboard({ orders: initialOrders }: { orders: Orde
         </div>
       </div>
 
-      {/* Orders table */}
-      <div className="card overflow-x-auto p-0">
+      {/* Orders — desktop table */}
+      <div className="hidden md:block card overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b-2 border-border-pink">
@@ -314,6 +314,95 @@ export default function AdminDashboard({ orders: initialOrders }: { orders: Orde
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Orders — mobile cards */}
+      <div className="md:hidden space-y-4">
+        {filtered.length === 0 && (
+          <div className="card text-center py-10">
+            <p className="font-im-fell italic text-plum/50">No orders found.</p>
+          </div>
+        )}
+        {filtered.map((order) => (
+          <div key={order.id} className="card space-y-3">
+            {/* Top row */}
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-im-fell italic text-plum font-medium text-lg leading-tight">
+                  {order.customer_name}
+                </p>
+                <p className="font-im-fell-sc text-plum/50 text-xs mt-0.5">
+                  {order.reference_number}
+                </p>
+              </div>
+              <span className={`font-im-fell-sc text-xs px-2 py-1 rounded-lg border-2 whitespace-nowrap ${STATUS_COLORS[order.status]}`}>
+                {STATUS_LABELS[order.status]}
+              </span>
+            </div>
+
+            {/* Key details */}
+            <div className="flex gap-4 text-center">
+              <div>
+                <p className="font-cormorant italic text-berry text-2xl font-medium">{order.quantity}</p>
+                <p className="font-im-fell-sc text-plum/50 text-xs capitalize">{order.flavor}</p>
+              </div>
+              <div className="border-l border-border-pink" />
+              <div>
+                <p className="font-cormorant italic text-berry text-2xl font-medium">${order.total_price}</p>
+                <p className="font-im-fell-sc text-plum/50 text-xs">Total</p>
+              </div>
+              <div className="border-l border-border-pink" />
+              <div>
+                <p className="font-cormorant italic text-berry text-2xl font-medium">
+                  {new Date(order.pickup_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </p>
+                <p className="font-im-fell-sc text-plum/50 text-xs">Pickup</p>
+              </div>
+            </div>
+
+            {/* Status + actions */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <select
+                value={order.status}
+                onChange={(e) => updateStatus(order.id, e.target.value as Status)}
+                className={`font-im-fell-sc text-xs px-2 py-1.5 rounded-lg border-2 outline-none flex-1 ${STATUS_COLORS[order.status]}`}
+              >
+                {Object.entries(STATUS_LABELS).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+              {order.status === "new" && (
+                <button
+                  onClick={() => updateStatus(order.id, "confirmed")}
+                  className="font-im-fell-sc text-xs px-3 py-1.5 rounded-pill bg-mint/40 text-teal-800 border-2 border-mint hover:bg-mint transition-colors"
+                >
+                  Mark confirmed
+                </button>
+              )}
+            </div>
+
+            {/* Expand toggle */}
+            <button
+              onClick={() => setExpandedId(expandedId === order.id ? null : order.id)}
+              className="font-im-fell-sc text-xs text-plum/50 hover:text-rose transition-colors uppercase tracking-widest w-full text-center pt-1"
+            >
+              {expandedId === order.id ? "▲ Hide details" : "▼ Show details"}
+            </button>
+
+            {/* Expanded details */}
+            {expandedId === order.id && (
+              <div className="border-t border-dashed border-border-pink pt-3 space-y-2">
+                <Detail label="Email" value={order.customer_email} />
+                <Detail label="Phone" value={order.customer_phone} />
+                <Detail label="Icing" value={order.icing_colors?.join(", ") || "—"} />
+                <Detail label="Topper" value={order.topper ? (order.topper_description ?? "Yes") : "No"} />
+                <Detail label="Extras" value={order.sprinkles_or_glitter ?? "None"} />
+                {order.delivery_address && <Detail label="Address" value={order.delivery_address} />}
+                <Detail label="Notes" value={order.notes || "None"} />
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
