@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: linear-gradient(to bottom, #fff5f8, #fbf0fa, #f0f5fb);
+    background-attachment: fixed;
+    min-height: 100vh;
+    color: #4a3050;
+  }
+}
+
+@layer utilities {
+  /* Dashed divider with centered sparkle */
+  .divider {
+    @apply flex items-center gap-3 text-border-pink my-8;
+  }
+  .divider::before,
+  .divider::after {
+    content: "";
+    @apply flex-1 border-t-2 border-dashed border-border-pink;
+  }
+
+  /* Pill button with raised shadow */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-8 py-3 rounded-pill
+           bg-rose text-white font-im-fell-sc tracking-wide
+           shadow-btn
+           hover:bg-rose-deep hover:shadow-none hover:translate-y-[3px]
+           transition-all duration-150;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-8 py-3 rounded-pill
+           border-2 border-rose text-rose font-im-fell-sc tracking-wide
+           hover:bg-rose hover:text-white
+           transition-all duration-150;
+  }
+
+  /* Card surface */
+  .card {
+    @apply bg-white rounded-2xl shadow-card p-6;
+  }
+}
