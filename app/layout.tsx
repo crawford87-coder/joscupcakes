@@ -4,6 +4,8 @@ import {
   IM_Fell_English,
   IM_Fell_English_SC,
 } from "next/font/google";
+import Nav from "@/components/Nav";
+import Footer from "@/components/Footer";
 import "./globals.css";
 
 const cormorantGaramond = Cormorant_Garamond({
@@ -46,7 +48,11 @@ export default function RootLayout({
       lang="en"
       className={`${cormorantGaramond.variable} ${imFellEnglish.variable} ${imFellEnglishSC.variable}`}
     >
-      <body className="font-im-fell antialiased">{children}</body>
+      <body className="font-im-fell antialiased min-h-screen bg-page-gradient flex flex-col">
+        <Nav />
+        <main className="flex-1">{children}</main>
+        <Footer />
+      </body>
     </html>
   );
 }
