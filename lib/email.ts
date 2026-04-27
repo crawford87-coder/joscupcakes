@@ -1,9 +1,13 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-function getResend() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error("RESEND_API_KEY is not set");
-  return new Resend(key);
+function getTransporter() {
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  if (!user || !pass) throw new Error("GMAIL_USER or GMAIL_APP_PASSWORD is not set");
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass },
+  });
 }
 
 export interface NewOrderEmailPayload {
@@ -25,9 +29,9 @@ export interface NewOrderEmailPayload {
 
 export async function sendNewOrderEmail(order: NewOrderEmailPayload) {
   const joEmail = process.env.JO_EMAIL ?? "jo@joscupcakes.com";
-  const fromEmail = process.env.ADMIN_EMAIL_FROM ?? "orders@joscupcakes.com";
-  const adminUrl = process.env.NEXTAUTH_URL
-    ? `${process.env.NEXTAUTH_URL}/admin`
+  const fromEmail = process.env.GMAIL_USER ?? "jo@joscupcakes.com";
+  const adminUrl = process.env.SITE_URL
+    ? `${process.env.SITE_URL}/admin`
     : "https://joscupcakes.com/admin";
 
   const body = `A new order just came in.
@@ -46,7 +50,7 @@ From: ${order.customerName} · ${order.customerEmail} · ${order.customerPhone}
 
 Log in to confirm: ${adminUrl}`;
 
-  await getResend().emails.send({
+  await getTransporter().sendMail({
     from: fromEmail,
     to: joEmail,
     subject: `New wish: ${order.referenceNumber} — ${order.customerName}`,
@@ -55,7 +59,7 @@ Log in to confirm: ${adminUrl}`;
 }
 
 export async function sendConfirmationEmail(order: NewOrderEmailPayload) {
-  const fromEmail = process.env.ADMIN_EMAIL_FROM ?? "orders@joscupcakes.com";
+  const fromEmail = process.env.GMAIL_USER ?? "jo@joscupcakes.com";
 
   // Calculate 48h before pickup for change deadline
   const pickupMs = new Date(order.pickupDate).getTime();
@@ -81,7 +85,7 @@ Can't wait to bake these up.
 
 — Jo`;
 
-  await getResend().emails.send({
+  await getTransporter().sendMail({
     from: fromEmail,
     to: order.customerEmail,
     subject: `Your wish is granted ✦ ${order.referenceNumber}`,
