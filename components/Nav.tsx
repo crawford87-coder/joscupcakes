@@ -3,11 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Sparkle } from "./Decorative";
 
 const navLinks = [
   { href: "/", label: "Home" },
-  { href: "/order", label: "Order" },
   { href: "/about", label: "About" },
   { href: "/faq", label: "FAQ" },
 ];
@@ -16,38 +14,53 @@ export default function Nav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
+  // Don't show nav on admin pages
+  if (pathname.startsWith("/admin")) return null;
+
   return (
-    <header className="w-full px-6 py-5 relative z-50">
-      <nav className="max-w-5xl mx-auto flex items-center justify-between">
+    <header
+      className="w-full px-6 py-4 relative z-50"
+      style={{ backgroundColor: "rgba(250,247,242,0.92)", backdropFilter: "blur(8px)", borderBottom: "1px solid #E8DDD4" }}
+    >
+      <nav className="max-w-6xl mx-auto flex items-center justify-between">
         {/* Wordmark */}
         <Link
           href="/"
           onClick={() => setOpen(false)}
-          className="font-im-fell-sc text-berry text-xl tracking-wide flex items-center gap-2 hover:text-rose transition-colors"
+          className="font-caveat text-xl tracking-wide transition-opacity hover:opacity-70"
+          style={{ color: "#3D2B1F" }}
         >
-          <Sparkle size={12} className="text-rose-light" />
-          Jo&apos;s Cupcakes
+          ✦ Jo&apos;s Cupcakes
         </Link>
 
         {/* Desktop links */}
-        <ul className="hidden md:flex items-center gap-6">
+        <ul className="hidden md:flex items-center gap-7">
           {navLinks.map(({ href, label }) => (
             <li key={href}>
               <Link
                 href={href}
-                className={`font-im-fell-sc text-sm tracking-widest uppercase transition-colors ${
-                  pathname === href
-                    ? "text-rose border-b-2 border-rose pb-0.5"
-                    : "text-plum hover:text-rose"
-                }`}
+                className="font-caveat text-base transition-all"
+                style={{
+                  color: pathname === href ? "#D4788E" : "#6B5C52",
+                  borderBottom: pathname === href ? "2px solid #D4788E" : "2px solid transparent",
+                  paddingBottom: "2px",
+                }}
               >
                 {label}
               </Link>
             </li>
           ))}
           <li>
-            <Link href="/order" className="btn-primary text-sm py-2 px-5">
-              ✦ Order
+            <Link
+              href="/#build"
+              onClick={() => setOpen(false)}
+              className="font-caveat text-base px-5 py-2 rounded-pill transition-all"
+              style={{
+                backgroundColor: "#D4788E",
+                color: "white",
+              }}
+            >
+              ✦ Build a Cupcake
             </Link>
           </li>
         </ul>
@@ -58,36 +71,53 @@ export default function Nav() {
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Close menu" : "Open menu"}
         >
-          <span className={`block w-6 h-0.5 bg-berry transition-transform duration-200 ${open ? "rotate-45 translate-y-2" : ""}`} />
-          <span className={`block w-6 h-0.5 bg-berry transition-opacity duration-200 ${open ? "opacity-0" : ""}`} />
-          <span className={`block w-6 h-0.5 bg-berry transition-transform duration-200 ${open ? "-rotate-45 -translate-y-2" : ""}`} />
+          <span
+            className={`block w-5 h-0.5 transition-transform duration-200 ${open ? "rotate-45 translate-y-2" : ""}`}
+            style={{ backgroundColor: "#3D2B1F" }}
+          />
+          <span
+            className={`block w-5 h-0.5 transition-opacity duration-200 ${open ? "opacity-0" : ""}`}
+            style={{ backgroundColor: "#3D2B1F" }}
+          />
+          <span
+            className={`block w-5 h-0.5 transition-transform duration-200 ${open ? "-rotate-45 -translate-y-2" : ""}`}
+            style={{ backgroundColor: "#3D2B1F" }}
+          />
         </button>
       </nav>
 
       {/* Mobile drawer */}
       {open && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-sm border-b-2 border-dashed border-border-pink shadow-card px-6 py-6 flex flex-col gap-5">
+        <div
+          className="md:hidden absolute top-full left-0 right-0 px-6 py-6 flex flex-col gap-5"
+          style={{
+            backgroundColor: "rgba(250,247,242,0.98)",
+            borderBottom: "1px solid #E8DDD4",
+            backdropFilter: "blur(8px)",
+          }}
+        >
           {navLinks.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
               onClick={() => setOpen(false)}
-              className={`font-im-fell-sc text-sm tracking-widest uppercase transition-colors ${
-                pathname === href ? "text-rose" : "text-plum hover:text-rose"
-              }`}
+              className="font-caveat text-lg transition-colors"
+              style={{ color: pathname === href ? "#D4788E" : "#6B5C52" }}
             >
               {label}
             </Link>
           ))}
           <Link
-            href="/order"
+            href="/#build"
             onClick={() => setOpen(false)}
-            className="btn-primary text-sm py-3 justify-center"
+            className="font-caveat text-lg py-3 rounded-pill text-center transition-all"
+            style={{ backgroundColor: "#D4788E", color: "white" }}
           >
-            ✦ Order
+            ✦ Build a Cupcake
           </Link>
         </div>
       )}
     </header>
   );
 }
+

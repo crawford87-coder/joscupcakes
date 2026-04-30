@@ -55,3 +55,61 @@ create index if not exists orders_created_at_idx on orders (created_at desc);
 -- Migration: run this if the orders table already exists
 -- ============================================================
 alter table orders add column if not exists pickup_time text;
+alter table orders add column if not exists reference_image_url text;
+alter table orders add column if not exists stripe_session_id text;
+
+-- Update status check constraint to include awaiting_payment
+-- Run these two lines if the orders table already exists:
+-- alter table orders drop constraint orders_status_check;
+-- alter table orders add constraint orders_status_check check (status in ('new', 'awaiting_payment', 'confirmed', 'in_progress', 'ready', 'delivered', 'cancelled'));
+
+-- ============================================================
+-- Customer notes / CRM table
+-- Run this migration in the Supabase SQL editor
+-- ============================================================
+create table if not exists customer_notes (
+  email text primary key,
+  notes text,
+  address text,
+  child_name text,
+  birthday_month int check (birthday_month between 1 and 12),
+  reminder_sent_at timestamptz,
+  updated_at timestamptz default now()
+);
+
+alter table customer_notes enable row level security;
+
+create policy "Admin can read customer notes"
+  on customer_notes for select
+  to authenticated
+  using (true);
+
+create policy "Admin can insert customer notes"
+  on customer_notes for insert
+  to authenticated
+  with check (true);
+
+create policy "Admin can update customer notes"
+  on customer_notes for update
+  to authenticated
+  using (true);
+
+-- ============================================================
+-- Storage: reference images bucket
+-- Run this in the Supabase SQL editor (or create via dashboard)
+-- ============================================================
+insert into storage.buckets (id, name, public)
+values ('reference-images', 'reference-images', true)
+on conflict (id) do nothing;
+
+-- Allow anonymous uploads (from the order form)
+create policy "Public can upload reference images"
+  on storage.objects for insert
+  to anon
+  with check (bucket_id = 'reference-images');
+
+-- Allow public read access (so Jo can view images in admin)
+create policy "Public can read reference images"
+  on storage.objects for select
+  to public
+  using (bucket_id = 'reference-images');

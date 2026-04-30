@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Divider } from "@/components/Decorative";
 import {
   PRICES,
@@ -60,7 +61,47 @@ const INITIAL: FormState = {
 type FieldError = Partial<Record<keyof FormState | "form", string>>;
 
 export default function OrderForm() {
+  const searchParams = useSearchParams();
   const [form, setForm] = useState<FormState>(INITIAL);
+
+  // Pre-fill from configurator query params (?flavor=X&icing=X,Y&topping=X&qty=N)
+  useEffect(() => {
+    const flavor = searchParams.get("flavor");
+    const icing = searchParams.get("icing");
+    const topping = searchParams.get("topping");
+    const qty = searchParams.get("qty");
+    const validFlavors = ["chocolate", "vanilla"] as const;
+    const validToppings = ["sprinkles", "glitter", "topper", "none"] as const;
+    const validQtys = [6, 12, 18, 24, 36, 48] as const;
+    const validIcingIds = new Set(ICING_COLOR_OPTIONS.map((c) => c.id));
+    setForm((prev) => ({
+      ...prev,
+      ...(flavor && (validFlavors as readonly string[]).includes(flavor)
+        ? { flavor: flavor as "chocolate" | "vanilla" }
+        : {}),
+      ...(icing
+        ? {
+            icingColors: icing
+              .split(",")
+              .filter((id) => validIcingIds.has(id))
+              .slice(0, 5),
+          }
+        : {}),
+      ...(topping && (validToppings as readonly string[]).includes(topping)
+        ? {
+            topper: topping === "topper",
+            extras:
+              topping === "sprinkles" || topping === "glitter"
+                ? (topping as "sprinkles" | "glitter")
+                : "",
+          }
+        : {}),
+      ...(qty && (validQtys as readonly number[]).includes(Number(qty))
+        ? { quantity: Number(qty) }
+        : {}),
+    }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [errors, setErrors] = useState<FieldError>({});
   const [submitted, setSubmitted] = useState(false);
   const [referenceNumber, setReferenceNumber] = useState("");
@@ -266,8 +307,8 @@ export default function OrderForm() {
       {/* Quantity */}
       <fieldset>
         <SectionHeading>How many cupcakes?</SectionHeading>
-        <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mt-4">
-          {([6, 12, 18, 24, 36] as const).map((qty) => (
+        <div className="grid grid-cols-3 gap-3 mt-4">
+          {([6, 12, 18, 24, 36, 48] as const).map((qty) => (
             <RadioCard
               key={qty}
               selected={form.quantity === qty}

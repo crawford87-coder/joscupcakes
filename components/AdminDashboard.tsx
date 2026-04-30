@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Status =
   | "new"
+  | "awaiting_payment"
   | "confirmed"
   | "in_progress"
   | "ready"
@@ -36,6 +37,7 @@ interface Order {
 
 const STATUS_LABELS: Record<Status, string> = {
   new: "New",
+  awaiting_payment: "Awaiting Payment",
   confirmed: "Confirmed",
   in_progress: "In Progress",
   ready: "Ready",
@@ -45,6 +47,7 @@ const STATUS_LABELS: Record<Status, string> = {
 
 const STATUS_COLORS: Record<Status, string> = {
   new: "bg-butter/40 text-amber-800 border-butter",
+  awaiting_payment: "bg-orange-100 text-orange-800 border-orange-200",
   confirmed: "bg-mint/40 text-teal-800 border-mint",
   in_progress: "bg-lavender/40 text-purple-800 border-lavender",
   ready: "bg-green-100 text-green-800 border-green-200",
@@ -97,6 +100,23 @@ export default function AdminDashboard({ orders: initialOrders }: { orders: Orde
     if (res.ok) {
       setOrders((prev) =>
         prev.map((o) => (o.id === id ? { ...o, status } : o))
+      );
+    }
+  }
+
+  const [sendingPayment, setSendingPayment] = useState<Record<string, boolean>>({});
+  const [paymentSent, setPaymentSent] = useState<Record<string, boolean>>({});
+
+  async function sendPaymentRequest(id: string) {
+    setSendingPayment((p) => ({ ...p, [id]: true }));
+    const res = await fetch(`/api/admin/orders/${id}/payment-link`, {
+      method: "POST",
+    });
+    setSendingPayment((p) => ({ ...p, [id]: false }));
+    if (res.ok) {
+      setPaymentSent((p) => ({ ...p, [id]: true }));
+      setOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status: "awaiting_payment" } : o))
       );
     }
   }
@@ -207,9 +227,8 @@ export default function AdminDashboard({ orders: initialOrders }: { orders: Orde
               </tr>
             )}
             {filtered.map((order) => (
-              <>
+              <React.Fragment key={order.id}>
                 <tr
-                  key={order.id}
                   onClick={() =>
                     setExpandedId(expandedId === order.id ? null : order.id)
                   }
@@ -257,11 +276,24 @@ export default function AdminDashboard({ orders: initialOrders }: { orders: Orde
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          updateStatus(order.id, "confirmed");
+                          sendPaymentRequest(order.id);
                         }}
-                        className="font-im-fell-sc text-xs px-3 py-1.5 rounded-pill bg-mint/40 text-teal-800 border-2 border-mint hover:bg-mint transition-colors"
+                        disabled={sendingPayment[order.id]}
+                        className="font-im-fell-sc text-xs px-3 py-1.5 rounded-pill bg-rose/20 text-rose border-2 border-rose/40 hover:bg-rose/30 transition-colors disabled:opacity-60"
                       >
-                        Mark confirmed
+                        {sendingPayment[order.id] ? "Sending…" : paymentSent[order.id] ? "✓ Sent" : "Send Payment Request"}
+                      </button>
+                    )}
+                    {order.status === "awaiting_payment" && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          sendPaymentRequest(order.id);
+                        }}
+                        disabled={sendingPayment[order.id]}
+                        className="font-im-fell-sc text-xs px-3 py-1.5 rounded-pill bg-orange-100 text-orange-800 border-2 border-orange-200 hover:bg-orange-200 transition-colors disabled:opacity-60"
+                      >
+                        {sendingPayment[order.id] ? "Sending…" : "Resend Link"}
                       </button>
                     )}
                   </td>
@@ -314,7 +346,7 @@ export default function AdminDashboard({ orders: initialOrders }: { orders: Orde
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             ))}
           </tbody>
         </table>
@@ -377,10 +409,20 @@ export default function AdminDashboard({ orders: initialOrders }: { orders: Orde
               </select>
               {order.status === "new" && (
                 <button
-                  onClick={() => updateStatus(order.id, "confirmed")}
-                  className="font-im-fell-sc text-xs px-3 py-1.5 rounded-pill bg-mint/40 text-teal-800 border-2 border-mint hover:bg-mint transition-colors"
+                  onClick={() => sendPaymentRequest(order.id)}
+                  disabled={sendingPayment[order.id]}
+                  className="font-im-fell-sc text-xs px-3 py-1.5 rounded-pill bg-rose/20 text-rose border-2 border-rose/40 hover:bg-rose/30 transition-colors disabled:opacity-60"
                 >
-                  Mark confirmed
+                  {sendingPayment[order.id] ? "Sending…" : paymentSent[order.id] ? "✓ Sent" : "Send Payment Request"}
+                </button>
+              )}
+              {order.status === "awaiting_payment" && (
+                <button
+                  onClick={() => sendPaymentRequest(order.id)}
+                  disabled={sendingPayment[order.id]}
+                  className="font-im-fell-sc text-xs px-3 py-1.5 rounded-pill bg-orange-100 text-orange-800 border-2 border-orange-200 hover:bg-orange-200 transition-colors disabled:opacity-60"
+                >
+                  {sendingPayment[order.id] ? "Sending…" : "Resend Link"}
                 </button>
               )}
             </div>

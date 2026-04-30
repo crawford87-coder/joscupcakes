@@ -1,29 +1,28 @@
-import { Sparkle } from "./Decorative";
-
 export default function Footer() {
   return (
-    <footer className="w-full py-10 mt-16 border-t-2 border-dashed border-border-pink">
-      <div className="max-w-5xl mx-auto px-6 flex flex-col items-center gap-3 text-center">
-        <div className="flex items-center gap-2 text-rose-light">
-          <Sparkle size={10} />
-          <Sparkle size={8} className="opacity-60" />
-          <Sparkle size={10} />
-        </div>
-        <p className="font-im-fell-sc text-plum text-sm tracking-widest">
-          ✦ Jo&apos;s Cupcakes ✦ Austin, TX ✦{" "}
+    <footer
+      className="w-full py-12 mt-0"
+      style={{ backgroundColor: "#F5F0E8", borderTop: "1px solid #E8DDD4" }}
+    >
+      <div className="max-w-5xl mx-auto px-6 flex flex-col items-center gap-4 text-center">
+        <p className="font-caveat text-2xl" style={{ color: "#3D2B1F" }}>
+          ✦ Jo&apos;s Cupcakes
+        </p>
+        <p className="font-im-fell italic text-sm opacity-60" style={{ color: "#6B5C52" }}>
+          Custom cupcakes for Austin&apos;s wildest birthday wishes ·{" "}
           <a
             href="mailto:jo@joscupcakes.com"
-            className="hover:text-rose transition-colors"
+            className="underline transition-opacity hover:opacity-100"
+            style={{ color: "#D4788E" }}
           >
             jo@joscupcakes.com
-          </a>{" "}
-          ✦
+          </a>
         </p>
-        <p className="font-im-fell italic text-plum/50 text-xs">
-          Custom cupcakes for Austin&apos;s wildest birthday wishes ·{" "}
-          {new Date().getFullYear()}
+        <p className="font-caveat text-xs opacity-30" style={{ color: "#6B5C52" }}>
+          Austin, TX · {new Date().getFullYear()}
         </p>
       </div>
     </footer>
   );
 }
+

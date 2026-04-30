@@ -3,6 +3,7 @@ import {
   Cormorant_Garamond,
   IM_Fell_English,
   IM_Fell_English_SC,
+  Caveat,
 } from "next/font/google";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
@@ -32,6 +33,13 @@ const imFellEnglishSC = IM_Fell_English_SC({
   display: "swap",
 });
 
+const caveat = Caveat({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-caveat",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Jo's Cupcakes — Custom Cupcakes in Austin, TX",
   description:
@@ -46,7 +54,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${cormorantGaramond.variable} ${imFellEnglish.variable} ${imFellEnglishSC.variable}`}
+      className={`${cormorantGaramond.variable} ${imFellEnglish.variable} ${imFellEnglishSC.variable} ${caveat.variable}`}
     >
       <body className="font-im-fell antialiased min-h-screen bg-page-gradient flex flex-col">
         <Nav />

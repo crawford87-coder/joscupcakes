@@ -6,6 +6,7 @@ export const PRICES: Record<number, number> = {
   18: 60,
   24: 76,
   36: 108,
+  48: 140,
 };
 
 export const ADDON_TOPPER = 8;

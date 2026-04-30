@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { generateReferenceNumber, calculateTotal } from "@/lib/pricing";
 import { sendNewOrderEmail } from "@/lib/email";
 
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
       topperDescription,
       sprinklesOrGlitter,
       notes,
+      referenceImageUrl,
     } = body;
 
     // Basic server-side validation
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     const referenceNumber = generateReferenceNumber();
 
-    const supabase = createClient();
+    const supabase = createServiceClient();
     const { error: dbError } = await supabase.from("orders").insert({
       reference_number: referenceNumber,
       customer_name: customerName,
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
       sprinkles_or_glitter: sprinklesOrGlitter ?? null,
       notes: notes ?? null,
       pickup_time: pickupTime ?? null,
+      reference_image_url: referenceImageUrl ?? null,
       total_price: totalPrice,
       status: "new",
     });
