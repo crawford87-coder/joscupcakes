@@ -164,16 +164,32 @@ export default function WatercolorBuilder() {
             </div>
           </div>
           <div className="relative mb-6">
-            <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-visible">
-              {[
-                { left: "3%",  top: "-0.35em", delay: "0s"    },
-                { left: "22%", top: "0.1em",   delay: "0.5s"  },
-                { left: "44%", top: "-0.45em", delay: "1.0s"  },
-                { left: "67%", top: "0.05em",  delay: "1.5s"  },
-                { left: "88%", top: "-0.35em", delay: "2.0s"  },
-              ].map((s, i) => (
-                <span key={i} className="sparkle-dot" style={{ left: s.left, top: s.top, animationDelay: s.delay }}>✦</span>
-              ))}
+            {/* Disney-opening sparkle burst */}
+            <span aria-hidden="true" className="sparkle-field">
+              {/* Cluster 1 — left side of text */}
+              <span className="sp sp-xl sp-gold   sp-a1"  style={{ left:"8%",  top:"50%", animationDuration:"2.8s", animationDelay:"0s"    }} />
+              <span className="sp sp-sm sp-white  sp-a5"  style={{ left:"12%", top:"40%", animationDuration:"2.2s", animationDelay:"0.3s"   }} />
+              <span className="sp sp-md sp-rose   sp-a3"  style={{ left:"6%",  top:"65%", animationDuration:"2.5s", animationDelay:"0.7s"   }} />
+              <span className="sp sp-lg sp-peach  sp-a8"  style={{ left:"15%", top:"55%", animationDuration:"3.0s", animationDelay:"1.1s"   }} />
+              <span className="sp sp-sm sp-gold   sp-a6"  style={{ left:"10%", top:"30%", animationDuration:"1.9s", animationDelay:"0.5s"   }} />
+              {/* Cluster 2 — centre */}
+              <span className="sp sp-xl sp-white  sp-a2"  style={{ left:"45%", top:"45%", animationDuration:"2.6s", animationDelay:"0.2s"   }} />
+              <span className="sp sp-lg sp-gold   sp-a9"  style={{ left:"50%", top:"60%", animationDuration:"3.1s", animationDelay:"0.8s"   }} />
+              <span className="sp sp-md sp-lavender sp-a4" style={{ left:"42%", top:"30%", animationDuration:"2.4s", animationDelay:"1.4s"   }} />
+              <span className="sp sp-sm sp-rose   sp-a11" style={{ left:"55%", top:"70%", animationDuration:"1.8s", animationDelay:"0.4s"   }} />
+              <span className="sp sp-sm sp-white  sp-a7"  style={{ left:"48%", top:"20%", animationDuration:"2.0s", animationDelay:"1.8s"   }} />
+              {/* Cluster 3 — right side */}
+              <span className="sp sp-xl sp-gold   sp-a10" style={{ left:"82%", top:"50%", animationDuration:"2.9s", animationDelay:"0.1s"   }} />
+              <span className="sp sp-lg sp-rose   sp-a2"  style={{ left:"88%", top:"35%", animationDuration:"2.3s", animationDelay:"0.6s"   }} />
+              <span className="sp sp-md sp-white  sp-a12" style={{ left:"78%", top:"65%", animationDuration:"2.7s", animationDelay:"1.0s"   }} />
+              <span className="sp sp-sm sp-peach  sp-a5"  style={{ left:"92%", top:"55%", animationDuration:"2.1s", animationDelay:"1.5s"   }} />
+              <span className="sp sp-sm sp-gold   sp-a3"  style={{ left:"85%", top:"25%", animationDuration:"1.7s", animationDelay:"0.9s"   }} />
+              {/* Accent floaters above/below text */}
+              <span className="sp sp-md sp-gold   sp-a8"  style={{ left:"30%", top:"10%", animationDuration:"2.4s", animationDelay:"1.2s"   }} />
+              <span className="sp sp-sm sp-lavender sp-a6" style={{ left:"65%", top:"15%", animationDuration:"2.0s", animationDelay:"0.2s"   }} />
+              <span className="sp sp-lg sp-white  sp-a1"  style={{ left:"25%", top:"80%", animationDuration:"3.2s", animationDelay:"1.6s"   }} />
+              <span className="sp sp-sm sp-rose   sp-a9"  style={{ left:"70%", top:"85%", animationDuration:"1.9s", animationDelay:"0.7s"   }} />
+              <span className="sp sp-md sp-gold   sp-a11" style={{ left:"38%", top:"75%", animationDuration:"2.6s", animationDelay:"2.0s"   }} />
             </span>
             <h1 className="font-cormorant italic font-medium leading-tight" style={{ fontSize: "clamp(3rem, 8vw, 5rem)", color: "#7D5318" }}>
               Build your dream cupcake
@@ -198,7 +214,7 @@ export default function WatercolorBuilder() {
       <div className="lg:flex lg:items-start">
 
         {/* STICKY PREVIEW */}
-        <div className="lg:w-[44%] lg:sticky lg:top-0 lg:h-screen flex flex-col items-center justify-center py-8 px-4 lg:px-8 order-first">
+        <div className="lg:w-[44%] lg:sticky lg:top-0 lg:h-screen hidden lg:flex flex-col items-center justify-center py-8 px-4 lg:px-8 order-first">
           <div className="relative rounded-3xl p-8 flex flex-col items-center gap-6 w-full max-w-[320px] mx-auto"
             style={{ backgroundColor: "#FAF7F2", boxShadow: "0 8px 48px rgba(107,92,82,0.10)", border: "1.5px solid #E8DDD4" }}>
             <p className="font-caveat text-sm opacity-50 -mb-2" style={{ color: "#6B5C52" }}>your cupcake preview</p>
@@ -214,6 +230,31 @@ export default function WatercolorBuilder() {
 
         {/* STEPS */}
         <div className="lg:w-[56%]">
+
+          {/* Mobile-only: sticky mini preview bar */}
+          <div
+            className="lg:hidden sticky top-[69px] z-30 px-4 py-3 flex items-center gap-4"
+            style={{ backgroundColor: "rgba(250,247,242,0.97)", borderBottom: "1px solid #E8DDD4", backdropFilter: "blur(8px)" }}
+          >
+            {/* Mini cupcake */}
+            <div className="flex-shrink-0 relative" style={{ width: 72, height: 84 }}>
+              <MiniPreview build={build} />
+            </div>
+            {/* Step chips */}
+            <div className="flex items-center gap-1 min-w-0 flex-1">
+              <MobileStepChip done={!!build.flavor} color="#F2C9A8" onClick={() => scrollToStep(1)}>
+                {build.flavor || "Base"}
+              </MobileStepChip>
+              <span className="opacity-30 text-xs flex-shrink-0">›</span>
+              <MobileStepChip done={!!build.frosting} color="#C4AED8" onClick={() => scrollToStep(2)}>
+                {frostingLabel || "Frosting"}
+              </MobileStepChip>
+              <span className="opacity-30 text-xs flex-shrink-0">›</span>
+              <MobileStepChip done={!!build.topper} color="#A8C8E8" onClick={() => scrollToStep(3)}>
+                {topperLabel || "Topper"}
+              </MobileStepChip>
+            </div>
+          </div>
 
           {/* STEP 1: BASE */}
           <section ref={(el) => { stepRefs.current[1] = el; }} className="relative min-h-screen flex items-center px-6 py-20 lg:py-32 overflow-hidden">
@@ -253,9 +294,9 @@ export default function WatercolorBuilder() {
               <div className="grid grid-cols-3 gap-4 mb-8">
                 {FROSTING_OPTIONS.map(({ id, label, desc, img }) => (
                   <WcSelectionCard key={id} selected={build.frosting === id} onClick={() => set("frosting", id)} accentColor="#C4AED8">
-                    <div className="relative w-28 h-28 mx-auto"><Image src={img} alt={label} fill sizes="112px" className="object-contain" /></div>
+                    <div className="relative w-16 h-16 sm:w-28 sm:h-28 mx-auto"><Image src={img} alt={label} fill sizes="(max-width: 640px) 64px, 112px" className="object-contain" /></div>
                     <p className="font-caveat text-sm mt-2" style={{ color: "#3D2B1F" }}>{label}</p>
-                    <p className="font-im-fell italic text-xs opacity-50 mt-0.5" style={{ color: "#6B5C52" }}>{desc}</p>
+                    <p className="font-im-fell italic text-xs opacity-50 mt-0.5 hidden sm:block" style={{ color: "#6B5C52" }}>{desc}</p>
                   </WcSelectionCard>
                 ))}
               </div>
@@ -508,6 +549,61 @@ function LivePreview({ build }: { build: BuildState }) {
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-2xl">✏️</div>
       )}
     </div>
+  );
+}
+
+function MiniPreview({ build }: { build: BuildState }) {
+  const baseImg = build.flavor === "chocolate" ? "/cupcakes/base-choc.png" : build.flavor === "vanilla" ? "/cupcakes/base-vanilla.png" : null;
+  const frostingImg = build.frosting ? FROSTING_OPTIONS.find((f) => f.id === build.frosting)?.img : null;
+  const topperImg = build.topper && build.topper !== "custom" ? TOPPER_OPTIONS.find((t) => t.id === build.topper)?.img : null;
+
+  if (!baseImg) {
+    return (
+      <div className="w-full h-full rounded-xl flex items-center justify-center" style={{ backgroundColor: "#F5F0E8" }}>
+        <span className="text-lg opacity-30">🧁</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full">
+      {/* Base — anchored to bottom */}
+      <div className="absolute bottom-2 inset-x-0 h-14">
+        <Image src={baseImg} alt="base" fill sizes="72px" className="object-contain object-bottom" />
+      </div>
+      {/* Frosting — sits on top of base */}
+      {frostingImg && (
+        <div className="absolute bottom-4 inset-x-0 h-14">
+          <Image src={frostingImg} alt="frosting" fill sizes="72px" className="object-contain object-bottom" />
+        </div>
+      )}
+      {/* Topper — sits on top of frosting tip */}
+      {topperImg && (
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-10 h-10">
+          <Image src={topperImg} alt="topper" fill sizes="40px" className="object-contain object-bottom" />
+        </div>
+      )}
+      {build.topper === "custom" && (
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 font-caveat text-lg leading-none font-bold" style={{ color: "#C4AED8" }}>?</div>
+      )}
+    </div>
+  );
+}
+
+function MobileStepChip({ children, done, color, onClick }: { children: React.ReactNode; done: boolean; color: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex-1 min-w-0 font-caveat text-xs px-2 py-1 rounded-full capitalize transition-all truncate text-center"
+      style={{
+        backgroundColor: done ? color + "66" : "#F0EBE4",
+        border: `1.5px solid ${done ? color : "#D8D0C8"}`,
+        color: "#3D2B1F",
+      }}
+    >
+      {done ? "✓ " : ""}{children}
+    </button>
   );
 }
 
