@@ -1,32 +1,28 @@
 // Pricing constants used by both the form and the API route
 
 export const PRICES: Record<number, number> = {
-  6: 24,
-  12: 42,
-  18: 60,
-  24: 76,
-  36: 108,
-  48: 140,
+  6: 30,
+  12: 54,
+  18: 75,
+  24: 96,
+  36: 138,
+  48: 160,
 };
 
 export const ADDON_TOPPER = 8;
-export const ADDON_EXTRAS = 3; // sprinkles or glitter
 export const ADDON_DELIVERY = 10;
 
 export function calculateTotal({
   quantity,
   topper,
-  hasExtras,
   delivery,
 }: {
   quantity: number;
   topper: boolean;
-  hasExtras: boolean;
   delivery: boolean;
 }): number {
   let total = PRICES[quantity] ?? 0;
   if (topper) total += ADDON_TOPPER;
-  if (hasExtras) total += ADDON_EXTRAS;
   if (delivery) total += ADDON_DELIVERY;
   return total;
 }
@@ -64,15 +60,4 @@ export function generateReferenceNumber(): string {
   return `JC-${year}-${rand}`;
 }
 
-export const ICING_COLOR_OPTIONS = [
-  { id: "white", label: "White", hex: "#FFFFFF" },
-  { id: "pink", label: "Pink", hex: "#F4C0D1" },
-  { id: "lavender", label: "Lavender", hex: "#C5B8E8" },
-  { id: "mint", label: "Mint", hex: "#B5D9C7" },
-  { id: "butter", label: "Butter", hex: "#FAC775" },
-  { id: "blue", label: "Baby Blue", hex: "#A8D0E6" },
-  { id: "peach", label: "Peach", hex: "#F9C6A0" },
-  { id: "red", label: "Red", hex: "#E57373" },
-  { id: "teal", label: "Teal", hex: "#80CBC4" },
-  { id: "purple", label: "Purple", hex: "#9575CD" },
-];
+

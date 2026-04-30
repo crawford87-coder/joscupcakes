@@ -113,3 +113,52 @@ create policy "Public can read reference images"
   on storage.objects for select
   to public
   using (bucket_id = 'reference-images');
+
+-- ============================================================
+-- Gallery images table
+-- ============================================================
+create table if not exists gallery_images (
+  id uuid primary key default gen_random_uuid(),
+  url text not null,
+  caption text,
+  display_order int default 0,
+  created_at timestamptz default now()
+);
+
+alter table gallery_images enable row level security;
+
+create policy "Anyone can view gallery images"
+  on gallery_images for select
+  to anon
+  using (true);
+
+create policy "Admin can manage gallery images"
+  on gallery_images for all
+  to authenticated
+  using (true)
+  with check (true);
+
+create index if not exists gallery_images_display_order_idx on gallery_images (display_order asc, created_at desc);
+
+-- ============================================================
+-- Storage: gallery bucket
+-- Create via Supabase dashboard or run below SQL
+-- ============================================================
+insert into storage.buckets (id, name, public)
+values ('gallery', 'gallery', true)
+on conflict (id) do nothing;
+
+create policy "Admin can upload gallery images"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'gallery');
+
+create policy "Admin can delete gallery images"
+  on storage.objects for delete
+  to authenticated
+  using (bucket_id = 'gallery');
+
+create policy "Public can read gallery images"
+  on storage.objects for select
+  to public
+  using (bucket_id = 'gallery');

@@ -14,34 +14,15 @@ import {
 } from "./WatercolorUI";
 import { PRICES, ADDON_TOPPER, ADDON_DELIVERY } from "@/lib/pricing";
 
-const PASTEL_PALETTE = [
-  { id: "pink",   label: "Pink",   hex: "#F4C0D1" },
-  { id: "purple", label: "Purple", hex: "#C5B8E8" },
-  { id: "blue",   label: "Blue",   hex: "#A8C8E8" },
-  { id: "green",  label: "Green",  hex: "#B5D9C7" },
-  { id: "yellow", label: "Yellow", hex: "#F0D898" },
-];
-
-const BRIGHT_PALETTE = [
-  { id: "hot-pink",      label: "Pink",   hex: "#F06090" },
-  { id: "bright-purple", label: "Purple", hex: "#9B59B6" },
-  { id: "bright-blue",   label: "Blue",   hex: "#3498DB" },
-  { id: "bright-green",  label: "Green",  hex: "#2ECC71" },
-  { id: "bright-yellow", label: "Yellow", hex: "#F1C40F" },
-];
-
 type Flavor = "vanilla" | "chocolate" | "";
-type FrostingCount = 1 | 2 | 3 | 5 | 0;
-type GlitterType = "rainbow-sugar" | "gold-glitter" | "sprinkles" | "";
+type FrostingType = "1-color" | "3-color" | "rainbow" | "";
 type TopperType = "unicorn" | "safari" | "pets" | "dinosaur" | "fairy" | "custom" | "";
 type Qty = 6 | 12 | 18 | 24 | 36 | 48;
 
 interface BuildState {
   flavor: Flavor;
-  frosting: FrostingCount;
-  paletteType: "pastel" | "bright" | "";
-  selectedColors: string[];
-  glitter: GlitterType;
+  frosting: FrostingType;
+  frostingColorNote: string;
   topper: TopperType;
   customTopperDesc: string;
   customTopperImageUrl: string | null;
@@ -50,10 +31,8 @@ interface BuildState {
 
 const INITIAL: BuildState = {
   flavor: "",
-  frosting: 0,
-  paletteType: "",
-  selectedColors: [],
-  glitter: "",
+  frosting: "",
+  frostingColorNote: "",
   topper: "",
   customTopperDesc: "",
   customTopperImageUrl: null,
@@ -63,21 +42,13 @@ const INITIAL: BuildState = {
 const STEP_COLORS = [
   { label: "Base",     color: "#F2C9A8" },
   { label: "Frosting", color: "#C4AED8" },
-  { label: "Glitter",  color: "#F0D898" },
   { label: "Topper",   color: "#A8C8E8" },
 ];
 
-const FROSTING_OPTIONS: { count: FrostingCount; label: string; desc: string; img: string }[] = [
-  { count: 1, label: "Single swirl", desc: "one dreamy colour",  img: "/cupcakes/swirl-single.png" },
-  { count: 2, label: "Dual swirl",   desc: "two-tone twist",     img: "/cupcakes/swirl-dual.png" },
-  { count: 3, label: "Triple swirl", desc: "three-colour swirl", img: "/cupcakes/swirl-triple.jpeg" },
-  { count: 5, label: "Rainbow",      desc: "all five colours",   img: "/cupcakes/swirl-rainbow.jpeg" },
-];
-
-const GLITTER_OPTIONS: { id: GlitterType; label: string; desc: string; img: string }[] = [
-  { id: "rainbow-sugar", label: "Rainbow sugar", desc: "pastel crystal shimmer", img: "/cupcakes/glitter-rainbow.png" },
-  { id: "gold-glitter",  label: "Gold glitter",  desc: "warm & radiant",         img: "/cupcakes/glitter-gold.png" },
-  { id: "sprinkles",     label: "Sprinkles",     desc: "classic rainbow jimmies", img: "/cupcakes/sprinkles.png" },
+const FROSTING_OPTIONS: { id: FrostingType; label: string; desc: string; img: string }[] = [
+  { id: "1-color", label: "1 colour",  desc: "one dreamy swirl",              img: "/cupcakes/swirl-single.png" },
+  { id: "3-color", label: "3 colours", desc: "triple swirl",                  img: "/cupcakes/swirl-triple.png" },
+  { id: "rainbow", label: "Rainbow",   desc: "meringue cookie on buttercream", img: "/cupcakes/swirl-rainbow.png" },
 ];
 
 const TOPPER_OPTIONS: { id: TopperType; label: string; img: string }[] = [
@@ -89,11 +60,6 @@ const TOPPER_OPTIONS: { id: TopperType; label: string; img: string }[] = [
   { id: "custom",   label: "Custom \u2726", img: "" },
 ];
 
-function colorsNeeded(frosting: FrostingCount): number {
-  if (frosting === 5) return 5;
-  return frosting as number;
-}
-
 export default function WatercolorBuilder() {
   const router = useRouter();
   const [build, setBuild] = useState<BuildState>(INITIAL);
@@ -103,7 +69,8 @@ export default function WatercolorBuilder() {
   const [customImageUploading, setCustomImageUploading] = useState(false);
   const [customImageError, setCustomImageError] = useState<string | null>(null);
   const customFileRef = useRef<HTMLInputElement>(null);
-  const stepRefs = useRef<(HTMLElement | null)[]>([null, null, null, null, null]);
+  // 0=hero, 1=base, 2=frosting, 3=topper
+  const stepRefs = useRef<(HTMLElement | null)[]>([null, null, null, null]);
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -126,21 +93,6 @@ export default function WatercolorBuilder() {
   const set = useCallback(<K extends keyof BuildState>(key: K, val: BuildState[K]) => {
     setBuild((prev) => ({ ...prev, [key]: val }));
   }, []);
-
-  const setFrosting = useCallback((count: FrostingCount) => {
-    setBuild((prev) => ({ ...prev, frosting: count, paletteType: "", selectedColors: [] }));
-  }, []);
-
-  function toggleColor(colorId: string) {
-    const needed = colorsNeeded(build.frosting);
-    setBuild((prev) => {
-      const has = prev.selectedColors.includes(colorId);
-      if (has) return { ...prev, selectedColors: prev.selectedColors.filter((c) => c !== colorId) };
-      if (prev.selectedColors.length >= needed)
-        return { ...prev, selectedColors: [...prev.selectedColors.slice(0, needed - 1), colorId] };
-      return { ...prev, selectedColors: [...prev.selectedColors, colorId] };
-    });
-  }
 
   async function handleCustomImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -167,33 +119,27 @@ export default function WatercolorBuilder() {
     }
   }
 
-  const palette = build.paletteType === "bright" ? BRIGHT_PALETTE : PASTEL_PALETTE;
-  const needed = build.frosting ? colorsNeeded(build.frosting) : 0;
-  const colorsSelected = build.selectedColors.length === needed && needed > 0;
-
   const completedSteps = [
     build.flavor ? 0 : -1,
-    (build.frosting && colorsSelected) ? 1 : -1,
-    build.glitter ? 2 : -1,
-    build.topper ? 3 : -1,
+    build.frosting ? 1 : -1,
+    build.topper ? 2 : -1,
   ].filter((n) => n >= 0);
 
-  const isComplete = !!(build.flavor && build.frosting && colorsSelected && build.glitter && build.topper);
+  const isComplete = !!(build.flavor && build.frosting && build.topper);
   const basePrice = PRICES[build.quantity] ?? 0;
   const topperPrice = build.topper ? ADDON_TOPPER : 0;
   const total = basePrice + topperPrice;
   const topperLabel = build.topper === "custom" ? "Custom topper" : TOPPER_OPTIONS.find((t) => t.id === build.topper)?.label ?? "";
+  const frostingLabel = FROSTING_OPTIONS.find((f) => f.id === build.frosting)?.label ?? "";
 
   function handleStartOrder() {
     const params = new URLSearchParams();
     if (build.flavor) params.set("flavor", build.flavor);
-    if (build.frosting) params.set("icing", String(build.frosting));
-    if (build.glitter) params.set("topping", build.glitter);
+    if (build.frosting) params.set("frostingType", build.frosting);
+    if (build.frostingColorNote) params.set("frostingColorNote", build.frostingColorNote);
     if (build.topper) params.set("topperDesc", build.topper);
     if (build.customTopperDesc) params.set("customTopperDesc", build.customTopperDesc);
     if (build.customTopperImageUrl) params.set("customTopperImageUrl", build.customTopperImageUrl);
-    if (build.paletteType) params.set("palette", build.paletteType);
-    if (build.selectedColors.length) params.set("colors", build.selectedColors.join(","));
     params.set("qty", String(build.quantity));
     router.push(`/order?${params.toString()}`);
   }
@@ -212,19 +158,29 @@ export default function WatercolorBuilder() {
         <CornerSplash corner="top-right" color="#A8C8E8" size={180} className="absolute top-0 right-0" />
         <CornerSplash corner="bottom-right" color="#E8A0B0" size={160} className="absolute bottom-0 right-0" />
         <div className="relative z-10 max-w-3xl mx-auto">
-          <p className="font-caveat text-base tracking-wide mb-6 opacity-60" style={{ color: "#6B5C52" }}>
-            \u2014 made with love in austin \u2014
-          </p>
           <div className="flex justify-center mb-8">
             <div className="relative w-[min(480px,85vw)] aspect-[4/3] drop-shadow-xl">
               <Image src="/cupcakes/hero.png" alt="Five beautifully decorated watercolour cupcakes" fill sizes="(max-width: 768px) 85vw, 480px" className="object-contain" priority />
             </div>
           </div>
-          <h1 className="font-cormorant italic font-medium leading-tight mb-6" style={{ fontSize: "clamp(3rem, 8vw, 5rem)", color: "#3D2B1F" }}>
-            Build your dream cupcake
-          </h1>
+          <div className="relative mb-6">
+            <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-visible">
+              {[
+                { left: "3%",  top: "-0.35em", delay: "0s"    },
+                { left: "22%", top: "0.1em",   delay: "0.5s"  },
+                { left: "44%", top: "-0.45em", delay: "1.0s"  },
+                { left: "67%", top: "0.05em",  delay: "1.5s"  },
+                { left: "88%", top: "-0.35em", delay: "2.0s"  },
+              ].map((s, i) => (
+                <span key={i} className="sparkle-dot" style={{ left: s.left, top: s.top, animationDelay: s.delay }}>✦</span>
+              ))}
+            </span>
+            <h1 className="font-cormorant italic font-medium leading-tight" style={{ fontSize: "clamp(3rem, 8vw, 5rem)", color: "#7D5318" }}>
+              Build your dream cupcake
+            </h1>
+          </div>
           <p className="font-im-fell italic text-xl leading-relaxed mb-10 opacity-70" style={{ color: "#6B5C52" }}>
-            Pick your base, frosting, sparkle and topper. Then we&apos;ll bake the magic.
+            Pick your base, frosting and topper. Then we&apos;ll bake the magic.
           </p>
           <button onClick={() => scrollToStep(1)} className="btn-primary text-xl px-12 py-4">
             Start Building ↓
@@ -249,16 +205,7 @@ export default function WatercolorBuilder() {
             <LivePreview build={build} />
             <div className="flex flex-wrap gap-1.5 justify-center">
               {build.flavor && <Chip color="#F2C9A8">{build.flavor}</Chip>}
-              {build.frosting > 0 && <Chip color="#C4AED8">{FROSTING_OPTIONS.find(f => f.count === build.frosting)?.label}</Chip>}
-              {colorsSelected && (
-                <div className="flex gap-1">
-                  {build.selectedColors.map((cid) => {
-                    const c = [...PASTEL_PALETTE, ...BRIGHT_PALETTE].find((p) => p.id === cid);
-                    return c ? <span key={cid} className="w-4 h-4 rounded-full inline-block" style={{ backgroundColor: c.hex, border: "1px solid rgba(0,0,0,0.1)" }} title={c.label} /> : null;
-                  })}
-                </div>
-              )}
-              {build.glitter && <Chip color="#F0D898">{GLITTER_OPTIONS.find(g => g.id === build.glitter)?.label}</Chip>}
+              {build.frosting && <Chip color="#C4AED8">{frostingLabel}</Chip>}
               {build.topper && <Chip color="#A8C8E8">{topperLabel}</Chip>}
             </div>
             <StepProgress steps={STEP_COLORS} activeStep={Math.max(0, activeStep - 1)} completedSteps={completedSteps} onStepClick={(i) => scrollToStep(i + 1)} />
@@ -280,7 +227,7 @@ export default function WatercolorBuilder() {
               <div className="grid grid-cols-2 gap-5">
                 {[
                   { id: "vanilla" as Flavor,   label: "Vanilla",   desc: "pale golden cake", img: "/cupcakes/base-vanilla.png" },
-                  { id: "chocolate" as Flavor, label: "Chocolate", desc: "rich dark cake",    img: "/cupcakes/base-choc.jpeg" },
+                  { id: "chocolate" as Flavor, label: "Chocolate", desc: "rich dark cake",    img: "/cupcakes/base-choc.png" },
                 ].map(({ id, label, desc, img }) => (
                   <WcSelectionCard key={id} selected={build.flavor === id} onClick={() => { set("flavor", id); setTimeout(() => scrollToStep(2), 400); }} accentColor="#F2C9A8">
                     <div className="relative w-32 h-32 mx-auto"><Image src={img} alt={`${label} cupcake base`} fill sizes="128px" className="object-contain" /></div>
@@ -302,100 +249,68 @@ export default function WatercolorBuilder() {
               <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>
                 Paint the frosting.
               </h2>
-              <p className="font-im-fell italic text-lg opacity-60 mb-10" style={{ color: "#6B5C52" }}>How many dreamy swirl colours would you like?</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
-                {FROSTING_OPTIONS.map(({ count, label, desc, img }) => (
-                  <WcSelectionCard key={count} selected={build.frosting === count} onClick={() => setFrosting(count)} accentColor="#C4AED8">
+              <p className="font-im-fell italic text-lg opacity-60 mb-10" style={{ color: "#6B5C52" }}>How would you like your frosting?</p>
+              <div className="grid grid-cols-3 gap-4 mb-8">
+                {FROSTING_OPTIONS.map(({ id, label, desc, img }) => (
+                  <WcSelectionCard key={id} selected={build.frosting === id} onClick={() => set("frosting", id)} accentColor="#C4AED8">
                     <div className="relative w-28 h-28 mx-auto"><Image src={img} alt={label} fill sizes="112px" className="object-contain" /></div>
                     <p className="font-caveat text-sm mt-2" style={{ color: "#3D2B1F" }}>{label}</p>
                     <p className="font-im-fell italic text-xs opacity-50 mt-0.5" style={{ color: "#6B5C52" }}>{desc}</p>
                   </WcSelectionCard>
                 ))}
               </div>
-              {build.frosting > 0 && (
-                <div className="rounded-3xl p-6 space-y-5" style={{ backgroundColor: "#FAF7F2", border: "1.5px solid #E8DDD4" }}>
-                  <p className="font-caveat text-lg" style={{ color: "#3D2B1F" }}>
-                    Now choose your {needed} colour{needed > 1 ? "s" : ""}
+
+              {/* Rainbow info note */}
+              {build.frosting === "rainbow" && (
+                <div className="rounded-2xl px-5 py-4 mb-6 flex items-start gap-3"
+                  style={{ backgroundColor: "#F5F0E8", border: "1.5px solid #C4AED8" }}>
+                  <span className="text-lg mt-0.5">✦</span>
+                  <p className="font-im-fell italic text-sm leading-relaxed" style={{ color: "#6B5C52" }}>
+                    Rainbow frosting is a meringue cookie sitting on classic buttercream — vanilla or chocolate to match your cake base. No colour choices needed!
                   </p>
-                  <div className="flex gap-3">
-                    {(["pastel", "bright"] as const).map((pt) => (
-                      <button key={pt} type="button"
-                        onClick={() => setBuild((p) => ({ ...p, paletteType: pt, selectedColors: [] }))}
-                        className="px-4 py-2 rounded-full font-caveat text-sm transition-all capitalize"
-                        style={{ backgroundColor: build.paletteType === pt ? "#C4AED8" : "#F5F0E8", border: build.paletteType === pt ? "2px solid #A088B8" : "2px solid #E8DDD4", color: "#3D2B1F" }}>
-                        {pt} palette
-                      </button>
-                    ))}
-                  </div>
-                  {build.paletteType && (
-                    <div className="flex gap-4 flex-wrap">
-                      {palette.map(({ id, label, hex }) => {
-                        const isSelected = build.selectedColors.includes(id);
-                        return (
-                          <button key={id} type="button" onClick={() => toggleColor(id)}
-                            className="flex flex-col items-center gap-1.5 transition-transform"
-                            style={{ transform: isSelected ? "scale(1.15)" : "scale(1)" }}
-                            aria-pressed={isSelected} aria-label={label}>
-                            <span className="w-10 h-10 rounded-full block" style={{ backgroundColor: hex, border: isSelected ? "3px solid #3D2B1F" : "2px solid #E8DDD4", boxShadow: isSelected ? "0 0 0 3px white, 0 0 0 5px #3D2B1F33" : "none" }} />
-                            <span className="font-caveat text-xs" style={{ color: "#6B5C52" }}>{label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {build.paletteType && (
-                    <div className="flex items-center gap-3">
-                      <div className="flex gap-1.5">
-                        {Array.from({ length: needed }).map((_, i) => {
-                          const cid = build.selectedColors[i];
-                          const hex = cid ? [...PASTEL_PALETTE, ...BRIGHT_PALETTE].find((p) => p.id === cid)?.hex : null;
-                          return <span key={i} className="w-5 h-5 rounded-full inline-block transition-colors" style={{ backgroundColor: hex ?? "#E8DDD4", border: "1px solid rgba(0,0,0,0.08)" }} />;
-                        })}
-                      </div>
-                      <span className="font-caveat text-sm opacity-60" style={{ color: "#6B5C52" }}>{build.selectedColors.length} / {needed} chosen</span>
-                      {colorsSelected && (
-                        <button onClick={() => setTimeout(() => scrollToStep(3), 200)}
-                          className="ml-auto font-caveat text-sm px-5 py-2 rounded-full"
-                          style={{ backgroundColor: "#C4AED8", color: "#3D2B1F" }}>
-                          Next ↓
-                        </button>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
-            </div>
-          </section>
 
-          <WashDivider color="#F0D898" />
+              {/* Colour note textarea for 1-color and 3-color */}
+              {(build.frosting === "1-color" || build.frosting === "3-color") && (
+                <div className="rounded-3xl p-6 space-y-3 mb-6" style={{ backgroundColor: "#FAF7F2", border: "1.5px solid #E8DDD4" }}>
+                  <p className="font-caveat text-lg" style={{ color: "#3D2B1F" }}>
+                    Tell Jo your colour wishes <span className="opacity-40 text-sm">(optional)</span>
+                  </p>
+                  <textarea
+                    value={build.frostingColorNote}
+                    onChange={(e) => set("frostingColorNote", e.target.value)}
+                    placeholder={build.frosting === "1-color"
+                      ? "e.g. soft lavender, hot pink, classic white..."
+                      : "e.g. pink, purple and mint, or pastels to match a rainbow theme..."}
+                    rows={3}
+                    className="w-full rounded-xl px-4 py-3 font-im-fell italic resize-none outline-none transition-colors"
+                    style={{ border: "2px solid #E8DDD4", backgroundColor: "white", color: "#3D2B1F" }}
+                    onFocus={(e) => (e.target.style.borderColor = "#C4AED8")}
+                    onBlur={(e) => (e.target.style.borderColor = "#E8DDD4")}
+                  />
+                </div>
+              )}
 
-          {/* STEP 3: GLITTER */}
-          <section ref={(el) => { stepRefs.current[3] = el; }} className="relative min-h-screen flex items-center px-6 py-20 lg:py-32 overflow-hidden">
-            <SectionWash color="#F0D898" />
-            <div className="relative z-10 w-full max-w-xl">
-              <StepPill number="03" label="Choose your sparkle" color="#F0D898" />
-              <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>A little shimmer.</h2>
-              <p className="font-im-fell italic text-lg opacity-60 mb-10" style={{ color: "#6B5C52" }}>Every cupcake deserves some sparkle.</p>
-              <div className="grid grid-cols-3 gap-4">
-                {GLITTER_OPTIONS.map(({ id, label, desc, img }) => (
-                  <WcSelectionCard key={id} selected={build.glitter === id} onClick={() => { set("glitter", id); setTimeout(() => scrollToStep(4), 400); }} accentColor="#F0D898">
-                    <div className="relative w-24 h-24 mx-auto mb-1"><Image src={img} alt={label} fill sizes="96px" className="object-contain" /></div>
-                    <p className="font-caveat text-sm" style={{ color: "#3D2B1F" }}>{label}</p>
-                    <p className="font-im-fell italic text-xs opacity-50 mt-0.5" style={{ color: "#6B5C52" }}>{desc}</p>
-                  </WcSelectionCard>
-                ))}
-              </div>
+              {build.frosting && (
+                <button
+                  onClick={() => setTimeout(() => scrollToStep(3), 200)}
+                  className="font-caveat text-sm px-6 py-2.5 rounded-full"
+                  style={{ backgroundColor: "#C4AED8", color: "#3D2B1F" }}>
+                  Next ↓
+                </button>
+              )}
             </div>
           </section>
 
           <WashDivider color="#A8C8E8" />
 
-          {/* STEP 4: TOPPER */}
-          <section ref={(el) => { stepRefs.current[4] = el; }} className="relative min-h-screen flex items-start px-6 py-20 lg:py-32 overflow-hidden">
+          {/* STEP 3: TOPPER */}
+          <section ref={(el) => { stepRefs.current[3] = el; }} className="relative min-h-screen flex items-start px-6 py-20 lg:py-32 overflow-hidden">
             <SectionWash color="#A8C8E8" />
             <CornerSplash corner="bottom-right" color="#E8A0B0" size={200} className="absolute bottom-0 right-0" />
             <div className="relative z-10 w-full max-w-xl">
-              <StepPill number="04" label="Choose your topper" color="#A8C8E8" />
+              <StepPill number="03" label="Choose your topper" color="#A8C8E8" />
               <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>The finishing touch.</h2>
               <p className="font-im-fell italic text-lg opacity-60 mb-10" style={{ color: "#6B5C52" }}>
                 A toy or paper topper sits on top of your frosting. +${ADDON_TOPPER}
@@ -476,11 +391,9 @@ export default function WatercolorBuilder() {
           <div className="rounded-3xl p-8 mb-8" style={{ backgroundColor: "#FAF7F2", boxShadow: "0 8px 48px rgba(107,92,82,0.10)", border: "1.5px solid #E8DDD4" }}>
             <div className="space-y-3 mb-8">
               {[
-                { label: "Base",     value: build.flavor || "\u2014",                                                                  color: "#F2C9A8", done: !!build.flavor,                       step: 1 },
-                { label: "Frosting", value: build.frosting ? (FROSTING_OPTIONS.find(f => f.count === build.frosting)?.label ?? "\u2014") : "\u2014", color: "#C4AED8", done: !!(build.frosting && colorsSelected), step: 2 },
-                { label: "Colours",  value: colorsSelected ? build.selectedColors.join(", ") : "\u2014",                               color: "#C4AED8", done: colorsSelected,                       step: 2 },
-                { label: "Sparkle",  value: build.glitter ? (GLITTER_OPTIONS.find(g => g.id === build.glitter)?.label ?? "\u2014") : "\u2014", color: "#F0D898", done: !!build.glitter,             step: 3 },
-                { label: "Topper",   value: build.topper ? topperLabel : "\u2014",                                                     color: "#A8C8E8", done: !!build.topper,                       step: 4 },
+                { label: "Base",     value: build.flavor || "\u2014",            color: "#F2C9A8", done: !!build.flavor,   step: 1 },
+                { label: "Frosting", value: frostingLabel || "\u2014",           color: "#C4AED8", done: !!build.frosting, step: 2 },
+                { label: "Topper",   value: build.topper ? topperLabel : "\u2014", color: "#A8C8E8", done: !!build.topper, step: 3 },
               ].map(({ label, value, color, done, step }) => (
                 <div key={label} className="flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: done ? color : "#E8DDD4" }} />
@@ -489,6 +402,13 @@ export default function WatercolorBuilder() {
                   {!done && <button onClick={() => scrollToStep(step)} className="font-caveat text-xs underline opacity-40 hover:opacity-70" style={{ color: "#6B5C52" }}>choose ↑</button>}
                 </div>
               ))}
+              {build.frostingColorNote && (
+                <div className="flex items-start gap-3 pt-1">
+                  <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ backgroundColor: "#C4AED8" }} />
+                  <span className="font-caveat text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#6B5C52" }}>Colours</span>
+                  <span className="font-im-fell italic text-sm flex-1" style={{ color: "#3D2B1F" }}>{build.frostingColorNote}</span>
+                </div>
+              )}
             </div>
             <div className="border-t pt-6" style={{ borderColor: "#E8DDD4" }}>
               <p className="font-caveat text-sm opacity-60 mb-4" style={{ color: "#6B5C52" }}>How many cupcakes?</p>
@@ -527,10 +447,9 @@ export default function WatercolorBuilder() {
                 <p className="font-caveat text-base opacity-50 mb-4" style={{ color: "#6B5C52" }}>Finish all steps above to continue</p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   {[
-                    { label: "Base",     done: !!build.flavor,                          step: 1 },
-                    { label: "Frosting", done: !!(build.frosting && colorsSelected),    step: 2 },
-                    { label: "Sparkle",  done: !!build.glitter,                         step: 3 },
-                    { label: "Topper",   done: !!build.topper,                          step: 4 },
+                    { label: "Base",     done: !!build.flavor,   step: 1 },
+                    { label: "Frosting", done: !!build.frosting, step: 2 },
+                    { label: "Topper",   done: !!build.topper,   step: 3 },
                   ].map(({ label, done, step }) => (
                     <button key={label} onClick={() => scrollToStep(step)}
                       className="rounded-full px-4 py-1.5 font-caveat text-sm transition-all"
@@ -558,9 +477,8 @@ export default function WatercolorBuilder() {
 }
 
 function LivePreview({ build }: { build: BuildState }) {
-  const frostingImg = build.frosting ? FROSTING_OPTIONS.find((f) => f.count === build.frosting)?.img : null;
-  const baseImg = build.flavor === "chocolate" ? "/cupcakes/base-choc.jpeg" : build.flavor === "vanilla" ? "/cupcakes/base-vanilla.png" : null;
-  const glitterImg = build.glitter ? GLITTER_OPTIONS.find((g) => g.id === build.glitter)?.img : null;
+  const frostingImg = build.frosting ? FROSTING_OPTIONS.find((f) => f.id === build.frosting)?.img : null;
+  const baseImg = build.flavor === "chocolate" ? "/cupcakes/base-choc.png" : build.flavor === "vanilla" ? "/cupcakes/base-vanilla.png" : null;
   const topperImg = build.topper && build.topper !== "custom" ? TOPPER_OPTIONS.find((t) => t.id === build.topper)?.img : null;
 
   if (!baseImg) {
@@ -579,11 +497,6 @@ function LivePreview({ build }: { build: BuildState }) {
       {frostingImg && (
         <div className="absolute inset-x-0 top-8 h-28">
           <Image src={frostingImg} alt="frosting" fill sizes="160px" className="object-contain object-bottom" />
-        </div>
-      )}
-      {glitterImg && (
-        <div className="absolute bottom-1 right-0 w-10 h-10 opacity-80">
-          <Image src={glitterImg} alt="sparkle" fill sizes="40px" className="object-contain" />
         </div>
       )}
       {topperImg && (

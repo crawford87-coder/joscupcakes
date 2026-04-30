@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
     const totalPrice = calculateTotal({
       quantity: Number(quantity),
       topper: Boolean(topper),
-      hasExtras: !!sprinklesOrGlitter,
       delivery: fulfillmentType === "delivery",
     });
 

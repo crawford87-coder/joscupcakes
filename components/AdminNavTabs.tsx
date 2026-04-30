@@ -8,6 +8,7 @@ const TABS = [
   { label: "Calendar", href: "/admin/calendar" },
   { label: "Analytics", href: "/admin/analytics" },
   { label: "Customers", href: "/admin/customers" },
+  { label: "Gallery", href: "/admin/gallery" },
 ];
 
 export default function AdminNavTabs() {
