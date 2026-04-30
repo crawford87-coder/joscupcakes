@@ -211,12 +211,55 @@ export default function WatercolorBuilder() {
       </section>
 
       {/* MAIN BUILDER */}
-      <div className="lg:flex lg:items-start">
+      <div className="relative">
 
         {/* STICKY PREVIEW */}
-        <div className="lg:w-[44%] lg:sticky lg:top-0 lg:h-screen hidden lg:flex flex-col items-center justify-center py-8 px-4 lg:px-8 order-first">
-          <div className="relative rounded-3xl p-8 flex flex-col items-center gap-6 w-full max-w-[320px] mx-auto"
-            style={{ backgroundColor: "#FAF7F2", boxShadow: "0 8px 48px rgba(107,92,82,0.10)", border: "1.5px solid #E8DDD4" }}>
+        <div className="hidden lg:block sticky top-0 z-20" style={{ height: 0 }}>
+          <div className="rounded-3xl p-8 flex flex-col items-center gap-6"
+            style={{ position: "absolute", top: "50vh", left: "23%", width: "clamp(240px, 38vw, 320px)", transform: "translate(-50%, -50%)", backgroundColor: "#FAF7F2", boxShadow: "0 8px 48px rgba(107,92,82,0.10)", border: "1.5px solid #E8DDD4" }}>
+
+            {/* Orbiting sparkle ring 1 — clockwise */}
+            <span aria-hidden="true" className="orbit-ring pointer-events-none absolute" style={{ inset: -24 }}>
+              {[
+                { top: "0%",   left: "50%",  color: "#F5C842", delay: "0s",    size: 7 },
+                { top: "25%",  left: "97%",  color: "#F2A7BE", delay: "0.6s",  size: 5 },
+                { top: "75%",  left: "97%",  color: "#D4AAFF", delay: "1.2s",  size: 6 },
+                { top: "100%", left: "50%",  color: "#F5C842", delay: "1.8s",  size: 5 },
+                { top: "75%",  left: "3%",   color: "#F9D49A", delay: "2.4s",  size: 7 },
+                { top: "25%",  left: "3%",   color: "#F2A7BE", delay: "3.0s",  size: 5 },
+              ].map((d, i) => (
+                <span key={i} className="orbit-dot absolute" style={{
+                  top: d.top, left: d.left,
+                  width: d.size, height: d.size,
+                  backgroundColor: d.color,
+                  boxShadow: `0 0 6px 2px ${d.color}99`,
+                  animationDelay: d.delay,
+                  transform: "translate(-50%, -50%)",
+                }} />
+              ))}
+            </span>
+
+            {/* Orbiting sparkle ring 2 — counter-clockwise, offset */}
+            <span aria-hidden="true" className="orbit-ring orbit-ring-rev pointer-events-none absolute" style={{ inset: -14 }}>
+              {[
+                { top: "15%",  left: "92%",  color: "#FFFBF0", delay: "0.3s",  size: 5 },
+                { top: "85%",  left: "92%",  color: "#F5C842", delay: "1.0s",  size: 4 },
+                { top: "85%",  left: "8%",   color: "#D4AAFF", delay: "1.7s",  size: 5 },
+                { top: "15%",  left: "8%",   color: "#F9D49A", delay: "2.5s",  size: 4 },
+                { top: "50%",  left: "100%", color: "#F2A7BE", delay: "0.8s",  size: 6 },
+                { top: "50%",  left: "0%",   color: "#F5C842", delay: "3.2s",  size: 5 },
+              ].map((d, i) => (
+                <span key={i} className="orbit-dot absolute" style={{
+                  top: d.top, left: d.left,
+                  width: d.size, height: d.size,
+                  backgroundColor: d.color,
+                  boxShadow: `0 0 5px 2px ${d.color}88`,
+                  animationDelay: d.delay,
+                  transform: "translate(-50%, -50%)",
+                }} />
+              ))}
+            </span>
+
             <p className="font-caveat text-sm opacity-50 -mb-2" style={{ color: "#6B5C52" }}>your cupcake preview</p>
             <LivePreview build={build} />
             <div className="flex flex-wrap gap-1.5 justify-center">
@@ -227,9 +270,6 @@ export default function WatercolorBuilder() {
             <StepProgress steps={STEP_COLORS} activeStep={Math.max(0, activeStep - 1)} completedSteps={completedSteps} onStepClick={(i) => scrollToStep(i + 1)} />
           </div>
         </div>
-
-        {/* STEPS */}
-        <div className="lg:w-[56%]">
 
           {/* Mobile-only: sticky mini preview bar */}
           <div
@@ -259,7 +299,7 @@ export default function WatercolorBuilder() {
           {/* STEP 1: BASE */}
           <section ref={(el) => { stepRefs.current[1] = el; }} className="relative min-h-screen flex items-center px-6 py-20 lg:py-32 overflow-hidden">
             <SectionWash color="#F2C9A8" />
-            <div className="relative z-10 w-full max-w-xl">
+            <div className="relative z-10 w-full max-w-xl lg:ml-[46%]">
               <StepPill number="01" label="Choose your base" color="#F2C9A8" />
               <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>
                 What&apos;s the cake?
@@ -285,7 +325,7 @@ export default function WatercolorBuilder() {
           {/* STEP 2: FROSTING */}
           <section ref={(el) => { stepRefs.current[2] = el; }} className="relative min-h-screen flex items-start px-6 py-20 lg:py-32 overflow-hidden">
             <SectionWash color="#C4AED8" />
-            <div className="relative z-10 w-full max-w-xl">
+            <div className="relative z-10 w-full max-w-xl lg:ml-[46%]">
               <StepPill number="02" label="Choose your frosting" color="#C4AED8" />
               <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>
                 Paint the frosting.
@@ -350,7 +390,7 @@ export default function WatercolorBuilder() {
           <section ref={(el) => { stepRefs.current[3] = el; }} className="relative min-h-screen flex items-start px-6 py-20 lg:py-32 overflow-hidden">
             <SectionWash color="#A8C8E8" />
             <CornerSplash corner="bottom-right" color="#E8A0B0" size={200} className="absolute bottom-0 right-0" />
-            <div className="relative z-10 w-full max-w-xl">
+            <div className="relative z-10 w-full max-w-xl lg:ml-[46%]">
               <StepPill number="03" label="Choose your topper" color="#A8C8E8" />
               <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>The finishing touch.</h2>
               <p className="font-im-fell italic text-lg opacity-60 mb-10" style={{ color: "#6B5C52" }}>
@@ -359,14 +399,20 @@ export default function WatercolorBuilder() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
                 {TOPPER_OPTIONS.map(({ id, label, img }) => (
                   <WcSelectionCard key={id} selected={build.topper === id} onClick={() => set("topper", id)} accentColor="#A8C8E8">
-                    {img ? (
-                      <div className="relative w-24 h-24 mx-auto mb-2"><Image src={img} alt={label} fill sizes="96px" className="object-contain" /></div>
-                    ) : (
-                      <div className="w-24 h-24 mx-auto mb-2 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#F5F0E8", border: "2px dashed #C4AED8" }}>
-                        <span className="text-3xl">✏️</span>
+                    <div className="flex flex-col items-center gap-2 py-1">
+                      <div className="flex items-center justify-center w-full">
+                        {img ? (
+                          <div className="relative" style={{ width: 140, height: 140 }}>
+                            <Image src={img} alt={label} fill sizes="140px" className="object-contain" />
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center rounded-2xl" style={{ width: 140, height: 140, backgroundColor: "#F5F0E8", border: "2px dashed #C4AED8" }}>
+                            <span className="font-caveat text-4xl" style={{ color: "#C4AED8" }}>?</span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    <p className="font-caveat text-base" style={{ color: "#3D2B1F" }}>{label}</p>
+                      <p className="font-caveat text-base" style={{ color: "#3D2B1F" }}>{label}</p>
+                    </div>
                   </WcSelectionCard>
                 ))}
               </div>
@@ -416,25 +462,24 @@ export default function WatercolorBuilder() {
               )}
             </div>
           </section>
-        </div>
       </div>
 
       {/* SUMMARY */}
-      <section className="relative px-6 py-24 overflow-hidden" style={{ backgroundColor: "#F5F0E8" }}>
+      <section className="relative px-6 py-24 overflow-hidden" style={{ backgroundColor: "#F5F0E8", zIndex: 30 }}>
         <SectionWash color="#E8A0B0" />
         <CornerSplash corner="top-left" color="#C4AED8" size={200} className="absolute top-0 left-0" />
         <CornerSplash corner="bottom-right" color="#F0D898" size={180} className="absolute bottom-0 right-0" />
         <div className="relative z-10 max-w-2xl mx-auto">
           <div className="text-center mb-12">
-            <p className="font-caveat text-base opacity-50 mb-2" style={{ color: "#6B5C52" }}>\u2014 almost done \u2014</p>
+            <p className="font-caveat text-base opacity-50 mb-2" style={{ color: "#6B5C52" }}>— almost done —</p>
             <h2 className="font-cormorant italic font-medium" style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)", color: "#3D2B1F" }}>Your cupcake order</h2>
           </div>
           <div className="rounded-3xl p-8 mb-8" style={{ backgroundColor: "#FAF7F2", boxShadow: "0 8px 48px rgba(107,92,82,0.10)", border: "1.5px solid #E8DDD4" }}>
             <div className="space-y-3 mb-8">
               {[
-                { label: "Base",     value: build.flavor || "\u2014",            color: "#F2C9A8", done: !!build.flavor,   step: 1 },
-                { label: "Frosting", value: frostingLabel || "\u2014",           color: "#C4AED8", done: !!build.frosting, step: 2 },
-                { label: "Topper",   value: build.topper ? topperLabel : "\u2014", color: "#A8C8E8", done: !!build.topper, step: 3 },
+                { label: "Base",     value: build.flavor || "—",            color: "#F2C9A8", done: !!build.flavor,   step: 1 },
+                { label: "Frosting", value: frostingLabel || "—",           color: "#C4AED8", done: !!build.frosting, step: 2 },
+                { label: "Topper",   value: build.topper ? topperLabel : "—", color: "#A8C8E8", done: !!build.topper, step: 3 },
               ].map(({ label, value, color, done, step }) => (
                 <div key={label} className="flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: done ? color : "#E8DDD4" }} />
