@@ -394,7 +394,7 @@ export default function WatercolorBuilder() {
               <StepPill number="03" label="Choose your topper" color="#A8C8E8" />
               <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>The finishing touch.</h2>
               <p className="font-im-fell italic text-lg opacity-60 mb-10" style={{ color: "#6B5C52" }}>
-                A toy or paper topper sits on top of your frosting. +${ADDON_TOPPER}
+                A toy or paper topper sits on top of your frosting.
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
                 {TOPPER_OPTIONS.map(({ id, label, img }) => (
