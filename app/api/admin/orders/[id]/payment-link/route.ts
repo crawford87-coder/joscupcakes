@@ -5,9 +5,10 @@ import { sendPaymentRequestEmail } from "@/lib/email";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = createClient();
+  const { id } = await params;
+  const supabase = await createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -19,7 +20,7 @@ export async function POST(
   const { data: order, error } = await supabase
     .from("orders")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (error || !order) {

@@ -2,11 +2,12 @@ import Link from "next/link";
 
 export const metadata = { title: "Payment cancelled — Jo's Cupcakes" };
 
-export default function PaymentCancelledPage({
+export default async function PaymentCancelledPage({
   searchParams,
 }: {
-  searchParams: { ref?: string };
+  searchParams: Promise<{ ref?: string }>;
 }) {
+  const { ref } = await searchParams;
   return (
     <div className="max-w-lg mx-auto px-6 py-24 text-center">
       <p className="text-5xl mb-6">🌸</p>
@@ -14,7 +15,7 @@ export default function PaymentCancelledPage({
         No worries
       </h1>
       <p className="font-eb-garamond text-tp-primary text-lg leading-relaxed mb-2">
-        Your order{searchParams.ref ? ` (${searchParams.ref})` : ""} is still
+        Your order{ref ? ` (${ref})` : ""} is still
         saved. If you&apos;d like to complete payment or have any questions, just
         reply to Jo&apos;s email and she&apos;ll help you sort it out.
       </p>

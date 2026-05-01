@@ -23,6 +23,35 @@ export const PRICES = PRICES_NO_TOPPER;
 
 export const ADDON_DELIVERY = 10;
 
+/** Display price for the topper add-on (minimum order of 6 cupcakes) */
+export const ADDON_TOPPER = 6;
+
+/** Display price for sprinkles/glitter extras — currently complimentary */
+export const ADDON_EXTRAS = 0;
+
+/** Icing colour palette available in the order form */
+export const ICING_COLOR_OPTIONS: { id: string; label: string; hex: string }[] = [
+  { id: "white",       label: "White",       hex: "#FFFFFF" },
+  { id: "blush-pink",  label: "Blush Pink",  hex: "#F9C0CB" },
+  { id: "rose",        label: "Rose",        hex: "#E8758A" },
+  { id: "red",         label: "Red",         hex: "#E63946" },
+  { id: "coral",       label: "Coral",       hex: "#FF8070" },
+  { id: "peach",       label: "Peach",       hex: "#FFBE9F" },
+  { id: "orange",      label: "Orange",      hex: "#F4A261" },
+  { id: "yellow",      label: "Yellow",      hex: "#FFD166" },
+  { id: "mint",        label: "Mint",        hex: "#A8E6CF" },
+  { id: "sage",        label: "Sage",        hex: "#8FB69C" },
+  { id: "green",       label: "Green",       hex: "#57CC99" },
+  { id: "sky-blue",    label: "Sky Blue",    hex: "#90CBF9" },
+  { id: "blue",        label: "Blue",        hex: "#4895EF" },
+  { id: "lavender",    label: "Lavender",    hex: "#C4AED8" },
+  { id: "purple",      label: "Purple",      hex: "#8338EC" },
+  { id: "lilac",       label: "Lilac",       hex: "#D5A6E6" },
+  { id: "chocolate",   label: "Chocolate",   hex: "#8B4513" },
+  { id: "gold",        label: "Gold",        hex: "#D4AF37" },
+  { id: "black",       label: "Black",       hex: "#2D2D2D" },
+];
+
 export function calculateTotal({
   quantity,
   topper,
@@ -31,6 +60,7 @@ export function calculateTotal({
   quantity: number;
   topper: boolean;
   delivery: boolean;
+  hasExtras?: boolean;
 }): number {
   const table = topper ? PRICES_WITH_TOPPER : PRICES_NO_TOPPER;
   let total = table[quantity] ?? 0;

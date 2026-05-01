@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -687,13 +688,13 @@ function SuccessScreen({ referenceNumber }: { referenceNumber: string }) {
         Jo will write back within a day with your final price and pickup details.
         Keep an eye on your inbox — and check spam, just in case.
       </p>
-      <a
+      <Link
         href="/"
         className="inline-block font-eb-garamond text-lg px-8 py-3 rounded-pill transition-opacity hover:opacity-80"
         style={{ backgroundColor: "#D4788E", color: "white" }}
       >
         Back to the beginning
-      </a>
+      </Link>
     </div>
   );
 }

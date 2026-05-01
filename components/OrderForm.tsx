@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Divider } from "@/components/Decorative";
@@ -696,9 +697,9 @@ function SuccessScreen({ referenceNumber }: { referenceNumber: string }) {
         an eye on your inbox — and check spam, just in case the fairies misroute
         it.
       </p>
-      <a href="/" className="btn-primary inline-flex">
+      <Link href="/" className="btn-primary inline-flex">
         Back to the beginning
-      </a>
+      </Link>
     </div>
   );
 }

@@ -7,7 +7,7 @@ import AdminCalendar from "@/components/AdminCalendar";
 export const metadata = { title: "Calendar — Jo's Cupcakes Admin" };
 
 export default async function CalendarPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();

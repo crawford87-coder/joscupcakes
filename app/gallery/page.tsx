@@ -9,7 +9,7 @@ export const metadata = {
 export const revalidate = 3600; // re-fetch at most once per hour
 
 export default async function GalleryPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: images } = await supabase
     .from("gallery_images")
     .select("id, url, caption")

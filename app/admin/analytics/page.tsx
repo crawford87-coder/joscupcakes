@@ -7,7 +7,7 @@ import AdminAnalytics from "@/components/AdminAnalytics";
 export const metadata = { title: "Analytics — Jo's Cupcakes Admin" };
 
 export default async function AnalyticsPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();

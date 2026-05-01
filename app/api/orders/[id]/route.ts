@@ -4,9 +4,10 @@ import { sendConfirmationEmail, NewOrderEmailPayload } from "@/lib/email";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = createClient();
+  const { id } = await params;
+  const supabase = await createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -26,7 +27,7 @@ export async function PATCH(
   const { data: order, error } = await supabase
     .from("orders")
     .update({ status })
-    .eq("id", params.id)
+    .eq("id", id)
     .select()
     .single();
 
