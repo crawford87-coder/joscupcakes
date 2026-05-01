@@ -13,12 +13,12 @@ export default function PaymentCancelledPage({
       <h1 className="font-eb-garamond italic text-tp-primary text-4xl font-medium mb-4">
         No worries
       </h1>
-      <p className="font-eb-garamond italic text-plum text-lg leading-relaxed mb-2">
+      <p className="font-eb-garamond text-tp-primary text-lg leading-relaxed mb-2">
         Your order{searchParams.ref ? ` (${searchParams.ref})` : ""} is still
         saved. If you&apos;d like to complete payment or have any questions, just
         reply to Jo&apos;s email and she&apos;ll help you sort it out.
       </p>
-      <p className="font-eb-garamond italic text-tp-muted text-base leading-relaxed mb-10">
+      <p className="font-eb-garamond text-tp-muted text-base leading-relaxed mb-10">
         Your spot isn&apos;t confirmed until payment is complete.
       </p>
       <Link href="/" className="btn-primary">

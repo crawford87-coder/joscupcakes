@@ -203,7 +203,7 @@ export default function WatercolorBuilder() {
               <span className="sp sp-sm sp-rose   sp-a9"  style={{ left:"70%", top:"85%", animationDuration:"1.9s", animationDelay:"0.7s"   }} />
               <span className="sp sp-md sp-gold   sp-a11" style={{ left:"38%", top:"75%", animationDuration:"2.6s", animationDelay:"2.0s"   }} />
             </span>
-            <h1 className="font-eb-garamond italic font-medium leading-tight" style={{ fontSize: "clamp(3rem, 8vw, 5rem)", color: "#7D5318" }}>
+            <h1 className="font-eb-garamond italic font-medium leading-tight" style={{ fontSize: "clamp(3rem, 8vw, 5rem)", color: "#4A2545" }}>
               Build your dream cupcake
             </h1>
           </div>
@@ -358,7 +358,7 @@ export default function WatercolorBuilder() {
                 <div className="rounded-2xl px-5 py-4 mb-6 flex items-start gap-3"
                   style={{ backgroundColor: "#F5F0E8", border: "1.5px solid #C4AED8" }}>
                   <span className="text-lg mt-0.5">✦</span>
-                  <p className="font-eb-garamond italic text-sm leading-relaxed" style={{ color: "#7A4A6E" }}>
+                  <p className="font-eb-garamond text-sm leading-relaxed" style={{ color: "#7A4A6E" }}>
                     Rainbow frosting is a meringue cookie sitting on classic buttercream — vanilla or chocolate to match your cake base. No colour choices needed!
                   </p>
                 </div>
@@ -377,7 +377,7 @@ export default function WatercolorBuilder() {
                       ? "e.g. soft lavender, hot pink, classic white..."
                       : "e.g. pink, purple and mint, or pastels to match a rainbow theme..."}
                     rows={3}
-                    className="w-full rounded-xl px-4 py-3 font-eb-garamond italic resize-none outline-none transition-colors"
+                    className="w-full rounded-xl px-4 py-3 font-eb-garamond resize-none outline-none transition-colors"
                     style={{ border: "2px solid #E8DDD4", backgroundColor: "white", color: "#4A2545" }}
                     onFocus={(e) => (e.target.style.borderColor = "#C4AED8")}
                     onBlur={(e) => (e.target.style.borderColor = "#E8DDD4")}
@@ -468,7 +468,7 @@ export default function WatercolorBuilder() {
                     <textarea value={build.customTopperDesc} onChange={(e) => set("customTopperDesc", e.target.value)}
                       placeholder="e.g. a little dinosaur in a birthday hat, a mermaid with purple hair..."
                       rows={3}
-                      className="w-full rounded-xl px-4 py-3 font-eb-garamond italic resize-none outline-none transition-colors"
+                      className="w-full rounded-xl px-4 py-3 font-eb-garamond resize-none outline-none transition-colors"
                       style={{ border: "2px solid #E8DDD4", backgroundColor: "white", color: "#4A2545" }}
                       onFocus={(e) => (e.target.style.borderColor = "#C4AED8")}
                       onBlur={(e) => (e.target.style.borderColor = "#E8DDD4")} />

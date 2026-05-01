@@ -681,7 +681,7 @@ function SuccessScreen({ referenceNumber }: { referenceNumber: string }) {
         </p>
       </div>
       <p
-        className="font-eb-garamond italic text-lg leading-relaxed opacity-80"
+        className="font-eb-garamond text-lg leading-relaxed opacity-80"
         style={{ color: "#7A4A6E" }}
       >
         Jo will write back within a day with your final price and pickup details.

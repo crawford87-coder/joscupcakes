@@ -55,7 +55,7 @@ export default async function GalleryPage() {
               </div>
               {img.caption && (
                 <div className="px-4 py-3" style={{ backgroundColor: "#FAF7F2" }}>
-                  <p className="font-eb-garamond italic text-sm" style={{ color: "#7A4A6E" }}>{img.caption}</p>
+                  <p className="font-eb-garamond text-sm" style={{ color: "#7A4A6E" }}>{img.caption}</p>
                 </div>
               )}
             </div>

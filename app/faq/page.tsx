@@ -70,7 +70,7 @@ export default function FaqPage() {
             <h2 className="font-eb-garamond italic font-medium text-xl mb-2" style={{ color: "#4A2545" }}>
               {q}
             </h2>
-            <p className="font-eb-garamond italic leading-relaxed" style={{ color: "#7A4A6E" }}>{a}</p>
+            <p className="font-eb-garamond leading-relaxed" style={{ color: "#7A4A6E" }}>{a}</p>
           </div>
         ))}
       </div>
@@ -81,7 +81,7 @@ export default function FaqPage() {
         <div className="flex-1 h-px" style={{ backgroundColor: "#E8DDD4" }} />
       </div>
 
-      <p className="font-eb-garamond italic text-center text-lg mb-8" style={{ color: "#7A4A6E" }}>
+      <p className="font-eb-garamond text-center text-lg mb-8" style={{ color: "#7A4A6E" }}>
         Still unsure about something? Ask me. I&apos;ll walk you through it.
       </p>
 

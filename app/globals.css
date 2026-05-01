@@ -21,6 +21,17 @@
 }
 
 @layer utilities {
+  /* Typography semantic roles */
+  .font-display {
+    font-family: var(--font-eb-garamond), Georgia, serif;
+    font-style: italic;
+  }
+
+  .font-body {
+    font-family: var(--font-eb-garamond), Georgia, serif;
+    font-style: normal;
+  }
+
   /* Watercolor section divider */
   .wc-divider {
     @apply relative flex items-center my-16 overflow-visible;
