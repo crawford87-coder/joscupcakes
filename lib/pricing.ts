@@ -1,15 +1,26 @@
 // Pricing constants used by both the form and the API route
 
-export const PRICES: Record<number, number> = {
-  6: 30,
-  12: 54,
-  18: 75,
-  24: 96,
-  36: 138,
-  48: 160,
+export const PRICES_NO_TOPPER: Record<number, number> = {
+  6: 24,
+  12: 46,
+  18: 68,
+  24: 88,
+  36: 126,
+  48: 168,
 };
 
-export const ADDON_TOPPER = 8;
+export const PRICES_WITH_TOPPER: Record<number, number> = {
+  6: 30,
+  12: 58,
+  18: 86,
+  24: 112,
+  36: 162,
+  48: 216,
+};
+
+// Legacy alias (used by order form / API — maps to no-topper base)
+export const PRICES = PRICES_NO_TOPPER;
+
 export const ADDON_DELIVERY = 10;
 
 export function calculateTotal({
@@ -21,8 +32,8 @@ export function calculateTotal({
   topper: boolean;
   delivery: boolean;
 }): number {
-  let total = PRICES[quantity] ?? 0;
-  if (topper) total += ADDON_TOPPER;
+  const table = topper ? PRICES_WITH_TOPPER : PRICES_NO_TOPPER;
+  let total = table[quantity] ?? 0;
   if (delivery) total += ADDON_DELIVERY;
   return total;
 }

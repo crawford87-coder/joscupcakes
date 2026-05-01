@@ -12,7 +12,16 @@ import {
   WcSelectionCard,
   StepProgress,
 } from "./WatercolorUI";
-import { PRICES, ADDON_TOPPER, ADDON_DELIVERY } from "@/lib/pricing";
+import { PRICES_NO_TOPPER, ADDON_DELIVERY } from "@/lib/pricing";
+
+type TopperKind = "none" | "paper" | "toy";
+const TOPPER_RATE: Record<TopperKind, number> = { none: 0, paper: 0.5, toy: 1.5 };
+const TOPPER_KIND_LABEL: Record<TopperKind, string> = { none: "No topper", paper: "Paper topper", toy: "Toy topper" };
+const TOPPER_KIND_DESC: Record<TopperKind, string> = {
+  none:  "Simple, frosting-only finish",
+  paper: "Lightweight printed designs for a playful finish",
+  toy:   "Keepsake toppers for an extra special touch",
+};
 
 type Flavor = "vanilla" | "chocolate" | "";
 type FrostingType = "1-color" | "3-color" | "rainbow" | "";
@@ -65,6 +74,7 @@ export default function WatercolorBuilder() {
   const [build, setBuild] = useState<BuildState>(INITIAL);
   const [activeStep, setActiveStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [topperKind, setTopperKind] = useState<TopperKind>("none");
   const [customImagePreview, setCustomImagePreview] = useState<string | null>(null);
   const [customImageUploading, setCustomImageUploading] = useState(false);
   const [customImageError, setCustomImageError] = useState<string | null>(null);
@@ -122,13 +132,14 @@ export default function WatercolorBuilder() {
   const completedSteps = [
     build.flavor ? 0 : -1,
     build.frosting ? 1 : -1,
-    build.topper ? 2 : -1,
+    (topperKind === "none" || build.topper) ? 2 : -1,
   ].filter((n) => n >= 0);
 
-  const isComplete = !!(build.flavor && build.frosting && build.topper);
-  const basePrice = PRICES[build.quantity] ?? 0;
-  const topperPrice = build.topper ? ADDON_TOPPER : 0;
-  const total = basePrice + topperPrice;
+  const isComplete = !!(build.flavor && build.frosting && (topperKind === "none" || build.topper));
+  const topperAddon = Math.round(TOPPER_RATE[topperKind] * build.quantity * 100) / 100;
+  const basePrice = PRICES_NO_TOPPER[build.quantity] ?? 0;
+  const total = basePrice + topperAddon;
+  const priceForQty = (q: number) => (PRICES_NO_TOPPER[q] ?? 0) + Math.round(TOPPER_RATE[topperKind] * q * 100) / 100;
   const topperLabel = build.topper === "custom" ? "Custom topper" : TOPPER_OPTIONS.find((t) => t.id === build.topper)?.label ?? "";
   const frostingLabel = FROSTING_OPTIONS.find((f) => f.id === build.frosting)?.label ?? "";
 
@@ -138,6 +149,7 @@ export default function WatercolorBuilder() {
     if (build.frosting) params.set("frostingType", build.frosting);
     if (build.frostingColorNote) params.set("frostingColorNote", build.frostingColorNote);
     if (build.topper) params.set("topperDesc", build.topper);
+    if (topperKind !== "none") params.set("topperKind", topperKind);
     if (build.customTopperDesc) params.set("customTopperDesc", build.customTopperDesc);
     if (build.customTopperImageUrl) params.set("customTopperImageUrl", build.customTopperImageUrl);
     params.set("qty", String(build.quantity));
@@ -391,12 +403,44 @@ export default function WatercolorBuilder() {
             <SectionWash color="#A8C8E8" />
             <CornerSplash corner="bottom-right" color="#E8A0B0" size={200} className="absolute bottom-0 right-0" />
             <div className="relative z-10 w-full max-w-xl lg:ml-[46%]">
-              <StepPill number="03" label="Choose your topper" color="#A8C8E8" />
+              <StepPill number="03" label="The finishing touch" color="#A8C8E8" />
               <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>The finishing touch.</h2>
-              <p className="font-im-fell italic text-lg opacity-60 mb-10" style={{ color: "#6B5C52" }}>
-                A toy or paper topper sits on top of your frosting.
+              <p className="font-im-fell italic text-lg opacity-60 mb-6" style={{ color: "#6B5C52" }}>
+                Add a finishing touch to bring your cupcakes to life.
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+
+              {/* Topper kind toggle */}
+              <div className="inline-flex rounded-full p-1 mb-2" style={{ backgroundColor: "#F0EBE3", border: "1.5px solid #E0D8CF" }}>
+                {([
+                  { val: "none"  as TopperKind, label: "No topper" },
+                  { val: "paper" as TopperKind, label: "Paper · +$0.50 each" },
+                  { val: "toy"   as TopperKind, label: "Toy · +$1.50 each" },
+                ]).map(({ val, label }) => (
+                  <button
+                    key={val}
+                    onClick={() => {
+                      setTopperKind(val);
+                      if (val === "none") set("topper", "");
+                    }}
+                    className="rounded-full px-4 py-2 font-caveat text-sm transition-all duration-200"
+                    style={{
+                      backgroundColor: topperKind === val ? "#A8C8E8" : "transparent",
+                      color: topperKind === val ? "#3D2B1F" : "#9A8F87",
+                      boxShadow: topperKind === val ? "0 2px 8px rgba(168,200,232,0.4)" : "none",
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {/* Contextual description */}
+              <p
+                className="font-im-fell italic text-sm mb-7 transition-opacity duration-200"
+                style={{ color: "#6B5C52", opacity: 0.55 }}
+              >
+                {TOPPER_KIND_DESC[topperKind]}
+              </p>
+              <div className={`grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6 transition-opacity duration-300 ${topperKind === "none" ? "opacity-30 pointer-events-none" : ""}`}>
                 {TOPPER_OPTIONS.map(({ id, label, img }) => (
                   <WcSelectionCard key={id} selected={build.topper === id} onClick={() => set("topper", id)} accentColor="#A8C8E8">
                     <div className="flex flex-col items-center gap-2 py-1">
@@ -416,7 +460,7 @@ export default function WatercolorBuilder() {
                   </WcSelectionCard>
                 ))}
               </div>
-              {build.topper === "custom" && (
+              {topperKind !== "none" && build.topper === "custom" && (
                 <div className="rounded-3xl p-6 space-y-5" style={{ backgroundColor: "#FAF7F2", border: "1.5px solid #E8DDD4" }}>
                   <p className="font-caveat text-lg" style={{ color: "#3D2B1F" }}>Tell Jo what you&apos;d love ✦</p>
                   <label className="block space-y-2">
@@ -479,7 +523,7 @@ export default function WatercolorBuilder() {
               {[
                 { label: "Base",     value: build.flavor || "—",            color: "#F2C9A8", done: !!build.flavor,   step: 1 },
                 { label: "Frosting", value: frostingLabel || "—",           color: "#C4AED8", done: !!build.frosting, step: 2 },
-                { label: "Topper",   value: build.topper ? topperLabel : "—", color: "#A8C8E8", done: !!build.topper, step: 3 },
+                { label: "Topper",   value: topperKind === "none" ? "No topper" : (build.topper ? topperLabel : "—"), color: "#A8C8E8", done: topperKind === "none" || !!build.topper, step: 3 },
               ].map(({ label, value, color, done, step }) => (
                 <div key={label} className="flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: done ? color : "#E8DDD4" }} />
@@ -504,7 +548,7 @@ export default function WatercolorBuilder() {
                     className="rounded-2xl py-3 flex flex-col items-center transition-all duration-200"
                     style={{ backgroundColor: build.quantity === q ? "#F2C9A8" : "#F5F0E8", border: build.quantity === q ? "2px solid #D4A870" : "2px solid transparent", boxShadow: build.quantity === q ? "0 4px 16px rgba(212,168,112,0.3)" : "none" }}>
                     <span className="font-cormorant italic text-2xl font-medium" style={{ color: "#3D2B1F" }}>{q}</span>
-                    <span className="font-caveat text-xs opacity-60" style={{ color: "#6B5C52" }}>${PRICES[q]}</span>
+                    <span className="font-caveat text-xs opacity-60" style={{ color: "#6B5C52" }}>${priceForQty(q)}</span>
                   </button>
                 ))}
               </div>
@@ -514,10 +558,10 @@ export default function WatercolorBuilder() {
                 <span className="font-im-fell italic opacity-60" style={{ color: "#6B5C52" }}>{build.quantity} cupcakes</span>
                 <span className="font-cormorant italic text-lg" style={{ color: "#3D2B1F" }}>${basePrice}</span>
               </div>
-              {build.topper && (
+              {topperKind !== "none" && (
                 <div className="flex justify-between">
-                  <span className="font-im-fell italic opacity-60" style={{ color: "#6B5C52" }}>Topper</span>
-                  <span className="font-cormorant italic text-lg" style={{ color: "#3D2B1F" }}>+${ADDON_TOPPER}</span>
+                  <span className="font-im-fell italic opacity-60" style={{ color: "#6B5C52" }}>{TOPPER_KIND_LABEL[topperKind]}</span>
+                  <span className="font-cormorant italic text-lg" style={{ color: "#3D2B1F" }}>+${topperAddon.toFixed(2).replace(".00", "")}</span>
                 </div>
               )}
               <div className="flex justify-between border-t pt-3" style={{ borderColor: "#E8DDD4" }}>
@@ -535,7 +579,7 @@ export default function WatercolorBuilder() {
                   {[
                     { label: "Base",     done: !!build.flavor,   step: 1 },
                     { label: "Frosting", done: !!build.frosting, step: 2 },
-                    { label: "Topper",   done: !!build.topper,   step: 3 },
+                    { label: "Topper",   done: topperKind === "none" || !!build.topper, step: 3 },
                   ].map(({ label, done, step }) => (
                     <button key={label} onClick={() => scrollToStep(step)}
                       className="rounded-full px-4 py-1.5 font-caveat text-sm transition-all"
