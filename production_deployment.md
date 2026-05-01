@@ -119,14 +119,17 @@ pm2 restart joscupcakes --update-env
 
 ## 6. nginx Reverse Proxy
 
-Create `/etc/nginx/sites-available/<domain>.conf`:
+Create `/etc/nginx/sites-available/joscupcakes.conf`.
+
+Example with internal port `3030`:
 
 ```nginx
 server {
+    listen 80;
     server_name your-domain.com www.your-domain.com;
 
     location / {
-        proxy_pass http://127.0.0.1:3020;
+        proxy_pass http://127.0.0.1:3030;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -141,7 +144,7 @@ server {
 Enable and reload:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/<domain>.conf /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/joscupcakes.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -151,17 +154,23 @@ sudo systemctl reload nginx
 After nginx is enabled for the domain:
 
 ```bash
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+sudo certbot --nginx -d joscupcakes.com -d www.joscupcakes.com
 ```
 
 Certbot will update the nginx config in place.
+
+Important Capek-Web note:
+
+- If some other nginx file already claims `your-domain.com` or `www.your-domain.com`, Certbot may attach the certificate to the wrong server block.
+- If `curl -I -H "Host: your-domain.com" http://127.0.0.1` or `curl -vkI https://your-domain.com` returns an empty reply, check whether another config such as `default-deny` has captured the domain.
+- The final active TLS server block for your domain must live in `joscupcakes.conf`, not in a generic deny/default config.
 
 ## 8. Stripe Webhook
 
 In the Stripe dashboard, configure the production webhook endpoint as:
 
 ```text
-https://your-domain.com/api/stripe/webhook
+https://joscupcakes.com/api/stripe/webhook
 ```
 
 Listen for at least:
@@ -182,9 +191,10 @@ After deployment, verify each layer.
 pm2 ls
 pm2 logs joscupcakes --lines 50
 sudo nginx -t
-ss -ltnp | grep 3020
-curl -I http://127.0.0.1:3020
-curl -I https://your-domain.com
+ss -ltnp | grep 3030
+curl -I http://127.0.0.1:3030
+curl -I -H "Host: joscupcakes.com" http://127.0.0.1
+curl -I https://joscupcakes.com
 ```
 
 Expected checks:
@@ -193,6 +203,73 @@ Expected checks:
 - nginx config passes
 - app is listening on the chosen localhost port
 - public domain returns a valid HTTPS response
+
+## 9.1 If PM2 Shows `errored`
+
+The most common first-deploy issue on Capek-Web is a port conflict.
+
+Example error:
+
+```text
+Error: listen EADDRINUSE: address already in use :::3020
+```
+
+That means something else is already listening on the internal port you chose.
+
+Check what is using the port:
+
+```bash
+ss -ltnp | grep 3020
+```
+
+If the port is already taken, pick a different unused port such as `3030`, `3040`, `4000`, or `5030`, then restart the app with the new port:
+
+```bash
+pm2 delete joscupcakes
+cd /srv/apps/joscupcakes
+PORT=3030 pm2 start npm --name "joscupcakes" -- start
+pm2 save
+```
+
+If nginx is already configured, update `proxy_pass` to the new port and reload nginx:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Then verify again:
+
+```bash
+pm2 ls
+pm2 logs joscupcakes --lines 50
+ss -ltnp | grep 3030
+curl -I http://127.0.0.1:3030
+```
+
+## 9.2 If HTTPS Returns `Empty reply from server`
+
+If the app works on localhost but the domain returns an empty reply, nginx usually has the domain attached to the wrong server block.
+
+Check which config files claim the domain:
+
+```bash
+sudo grep -R "joscupcakes.com\|3030\|3020" /etc/nginx/sites-available /etc/nginx/sites-enabled
+```
+
+If you see the domain inside `default-deny` or another unrelated config, remove those `server_name` entries from the wrong file and keep the domain only in `joscupcakes.conf`.
+
+After that, either rerun Certbot or move the TLS config into `joscupcakes.conf`, then reload nginx:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Expected result:
+
+- `curl -I -H "Host: joscupcakes.com" http://127.0.0.1` should hit the joscupcakes nginx server block
+- `curl -I https://joscupcakes.com` should return normal HTTP headers instead of an empty reply
 
 ## 10. Common Capek-Web Notes
 
