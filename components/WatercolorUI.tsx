@@ -155,14 +155,14 @@ export function StepPill({
       style={{ backgroundColor: color + "33", border: `1.5px solid ${color}66` }}
     >
       <span
-        className="font-caveat text-sm font-bold"
-        style={{ color: "#3D2B1F" }}
+        className="font-eb-garamond text-sm font-bold"
+        style={{ color: "#4A2545" }}
       >
         {number}
       </span>
       <span
-        className="font-caveat text-sm"
-        style={{ color: "#6B5C52" }}
+        className="font-eb-garamond text-sm"
+        style={{ color: "#7A4A6E" }}
       >
         {label}
       </span>
@@ -239,12 +239,12 @@ export function StepProgress({
             aria-label={`Step ${i + 1}: ${s.label}`}
           >
             <div
-              className="flex items-center justify-center rounded-full transition-all duration-300 font-caveat text-xs font-bold"
+              className="flex items-center justify-center rounded-full transition-all duration-300 font-eb-garamond text-xs font-bold"
               style={{
                 width: isActive ? 32 : 24,
                 height: isActive ? 32 : 24,
                 backgroundColor: isComplete || isActive ? s.color : "#E8E0D8",
-                color: isComplete || isActive ? "#3D2B1F" : "#9E9088",
+                color: isComplete || isActive ? "#4A2545" : "#A688A0",
                 boxShadow: isActive ? `0 0 0 4px ${s.color}44` : "none",
               }}
             >

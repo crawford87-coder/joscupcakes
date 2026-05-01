@@ -20,20 +20,20 @@ export default function OrderPage() {
       >
         <div className="relative z-10 max-w-2xl mx-auto">
           <p
-            className="font-caveat text-sm tracking-wide opacity-50 mb-4"
-            style={{ color: "#6B5C52" }}
+            className="font-eb-garamond text-sm tracking-wide opacity-50 mb-4"
+            style={{ color: "#7A4A6E" }}
           >
             — the final step —
           </p>
           <h1
-            className="font-cormorant italic font-medium leading-tight mb-3"
-            style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)", color: "#3D2B1F" }}
+            className="font-eb-garamond italic font-medium leading-tight mb-3"
+            style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)", color: "#4A2545" }}
           >
             Complete your order
           </h1>
           <p
-            className="font-im-fell italic text-xl opacity-60"
-            style={{ color: "#6B5C52" }}
+            className="font-eb-garamond italic text-xl opacity-60"
+            style={{ color: "#7A4A6E" }}
           >
             Fill in your details below. Jo will write back within a day with confirmation.
           </p>

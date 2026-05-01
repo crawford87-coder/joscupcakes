@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import {
+  EB_Garamond,
   Cormorant_Garamond,
   IM_Fell_English,
   IM_Fell_English_SC,
@@ -11,6 +12,14 @@ import {
   CornerSplash,
 } from "@/components/WatercolorUI";
 import "./globals.css";
+
+const ebGaramond = EB_Garamond({
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  weight: ["400", "500"],
+  variable: "--font-eb-garamond",
+  display: "swap",
+});
 
 const cormorantGaramond = Cormorant_Garamond({
   subsets: ["latin"],
@@ -57,9 +66,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${cormorantGaramond.variable} ${imFellEnglish.variable} ${imFellEnglishSC.variable} ${caveat.variable}`}
+      className={`${ebGaramond.variable} ${cormorantGaramond.variable} ${imFellEnglish.variable} ${imFellEnglishSC.variable} ${caveat.variable}`}
     >
-      <body className="font-im-fell antialiased min-h-screen bg-page-gradient flex flex-col">
+      <body className="font-eb-garamond antialiased min-h-screen bg-page-gradient flex flex-col">
         {/* Global watercolor corner accents — visible on every page */}
         <div className="pointer-events-none fixed inset-0 overflow-hidden z-0" aria-hidden="true">
           <CornerSplash corner="top-left"     color="#F2C9A8" size={260} className="absolute top-0 left-0" />

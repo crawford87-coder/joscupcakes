@@ -9,6 +9,10 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Text hierarchy tokens (customer-facing)
+        "tp-primary":   "#4A2545",
+        "tp-secondary":  "#7A4A6E",
+        "tp-muted":      "#7D5A7A",
         // Brand colours (kept for admin / utility use)
         berry: "#6B2547",
         plum: "#4A3050",
@@ -48,6 +52,7 @@ const config: Config = {
         "wc-muted": "#6B5C52",
       },
       fontFamily: {
+        "eb-garamond": ["var(--font-eb-garamond)", "Georgia", "serif"],
         cormorant: ["var(--font-cormorant)", "Georgia", "serif"],
         "im-fell": ["var(--font-im-fell)", "Georgia", "serif"],
         "im-fell-sc": ["var(--font-im-fell-sc)", "Georgia", "serif"],

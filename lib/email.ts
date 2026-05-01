@@ -92,8 +92,8 @@ export interface NewOrderEmailPayload {
 // ─── 1. New order alert (to Jo) ───────────────────────────────────────────
 
 export async function sendNewOrderEmail(order: NewOrderEmailPayload) {
-  const joEmail = process.env.JO_EMAIL ?? "jo@joscupcakes.com";
-  const fromEmail = process.env.GMAIL_USER ?? "jo@joscupcakes.com";
+  const joEmail = process.env.JO_EMAIL ?? "jo@jocrawford.me";
+  const fromEmail = process.env.GMAIL_USER ?? "jo@jocrawford.me";
   const adminUrl = `${process.env.SITE_URL ?? "https://joscupcakes.com"}/admin`;
 
   const html = emailWrapper(`
@@ -127,7 +127,7 @@ export async function sendNewOrderEmail(order: NewOrderEmailPayload) {
 // ─── 2. Confirmation email (to customer, after payment) ───────────────────
 
 export async function sendConfirmationEmail(order: NewOrderEmailPayload) {
-  const fromEmail = process.env.GMAIL_USER ?? "jo@joscupcakes.com";
+  const fromEmail = process.env.GMAIL_USER ?? "jo@jocrawford.me";
 
   const deadline = new Date(new Date(order.pickupDate).getTime() - 48 * 60 * 60 * 1000)
     .toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -176,7 +176,7 @@ export interface ReminderEmailPayload {
 }
 
 export async function sendReminderEmail(payload: ReminderEmailPayload) {
-  const fromEmail = process.env.GMAIL_USER ?? "jo@joscupcakes.com";
+  const fromEmail = process.env.GMAIL_USER ?? "jo@jocrawford.me";
   const childLine = payload.childName ? `${payload.childName}'s` : "the";
 
   const html = emailWrapper(`
@@ -224,7 +224,7 @@ export async function sendPaymentRequestEmail({
   paymentUrl: string;
   pickupDate: string;
 }) {
-  const fromEmail = process.env.GMAIL_USER ?? "jo@joscupcakes.com";
+  const fromEmail = process.env.GMAIL_USER ?? "jo@jocrawford.me";
   const amountDue = isDeposit ? depositAmount : totalPrice;
   const formattedPickup = new Date(pickupDate + "T12:00:00").toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric",

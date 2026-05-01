@@ -10,14 +10,14 @@ export default function PaymentSuccessPage({
   return (
     <div className="max-w-lg mx-auto px-6 py-24 text-center">
       <p className="text-5xl mb-6">🎂</p>
-      <h1 className="font-cormorant italic text-berry text-4xl font-medium mb-4">
+      <h1 className="font-eb-garamond italic text-tp-primary text-4xl font-medium mb-4">
         Payment received!
       </h1>
-      <p className="font-im-fell italic text-plum text-lg leading-relaxed mb-2">
+      <p className="font-eb-garamond italic text-plum text-lg leading-relaxed mb-2">
         Thank you{searchParams.ref ? ` for order ${searchParams.ref}` : ""}. Jo
         will be in touch shortly with your confirmation and all the details.
       </p>
-      <p className="font-im-fell italic text-plum/60 text-base leading-relaxed mb-10">
+      <p className="font-eb-garamond italic text-tp-muted text-base leading-relaxed mb-10">
         Check your inbox — a confirmation email is on its way.
       </p>
       <Link href="/" className="btn-primary">

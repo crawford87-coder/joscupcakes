@@ -29,7 +29,7 @@ export default function Nav() {
           href="/"
           onClick={() => setOpen(false)}
           className="font-caveat text-xl tracking-wide transition-opacity hover:opacity-70"
-          style={{ color: "#3D2B1F" }}
+          style={{ color: "#4A2545" }}
         >
           ✦ Jo&apos;s Cupcakes
         </Link>
@@ -40,9 +40,9 @@ export default function Nav() {
             <li key={href}>
               <Link
                 href={href}
-                className="font-caveat text-base transition-all"
+                className="font-eb-garamond text-base transition-all"
                 style={{
-                  color: pathname === href ? "#D4788E" : "#6B5C52",
+                  color: pathname === href ? "#D4788E" : "#7A4A6E",
                   borderBottom: pathname === href ? "2px solid #D4788E" : "2px solid transparent",
                   paddingBottom: "2px",
                 }}
@@ -55,7 +55,7 @@ export default function Nav() {
             <Link
               href="/#build"
               onClick={() => setOpen(false)}
-              className="font-caveat text-base px-5 py-2 rounded-pill transition-all"
+              className="font-eb-garamond text-base px-5 py-2 rounded-pill transition-all"
               style={{
                 backgroundColor: "#D4788E",
                 color: "white",
@@ -74,15 +74,15 @@ export default function Nav() {
         >
           <span
             className={`block w-5 h-0.5 transition-transform duration-200 ${open ? "rotate-45 translate-y-2" : ""}`}
-            style={{ backgroundColor: "#3D2B1F" }}
+            style={{ backgroundColor: "#4A2545" }}
           />
           <span
             className={`block w-5 h-0.5 transition-opacity duration-200 ${open ? "opacity-0" : ""}`}
-            style={{ backgroundColor: "#3D2B1F" }}
+            style={{ backgroundColor: "#4A2545" }}
           />
           <span
             className={`block w-5 h-0.5 transition-transform duration-200 ${open ? "-rotate-45 -translate-y-2" : ""}`}
-            style={{ backgroundColor: "#3D2B1F" }}
+            style={{ backgroundColor: "#4A2545" }}
           />
         </button>
       </nav>
@@ -102,8 +102,8 @@ export default function Nav() {
               key={href}
               href={href}
               onClick={() => setOpen(false)}
-              className="font-caveat text-lg transition-colors"
-              style={{ color: pathname === href ? "#D4788E" : "#6B5C52" }}
+              className="font-eb-garamond text-lg transition-colors"
+              style={{ color: pathname === href ? "#D4788E" : "#7A4A6E" }}
             >
               {label}
             </Link>
@@ -111,7 +111,7 @@ export default function Nav() {
           <Link
             href="/#build"
             onClick={() => setOpen(false)}
-            className="font-caveat text-lg py-3 rounded-pill text-center transition-all"
+              className="font-eb-garamond text-lg py-3 rounded-pill text-center transition-all"
             style={{ backgroundColor: "#D4788E", color: "white" }}
           >
             ✦ Build a Cupcake

@@ -203,11 +203,11 @@ export default function WatercolorBuilder() {
               <span className="sp sp-sm sp-rose   sp-a9"  style={{ left:"70%", top:"85%", animationDuration:"1.9s", animationDelay:"0.7s"   }} />
               <span className="sp sp-md sp-gold   sp-a11" style={{ left:"38%", top:"75%", animationDuration:"2.6s", animationDelay:"2.0s"   }} />
             </span>
-            <h1 className="font-cormorant italic font-medium leading-tight" style={{ fontSize: "clamp(3rem, 8vw, 5rem)", color: "#7D5318" }}>
+            <h1 className="font-eb-garamond italic font-medium leading-tight" style={{ fontSize: "clamp(3rem, 8vw, 5rem)", color: "#7D5318" }}>
               Build your dream cupcake
             </h1>
           </div>
-          <p className="font-im-fell italic text-xl leading-relaxed mb-10 opacity-70" style={{ color: "#6B5C52" }}>
+          <p className="font-eb-garamond italic text-xl leading-relaxed mb-10 opacity-70" style={{ color: "#7A4A6E" }}>
             Pick your base, frosting and topper. Then we&apos;ll bake the magic.
           </p>
           <button onClick={() => scrollToStep(1)} className="btn-primary text-xl px-12 py-4">
@@ -215,9 +215,9 @@ export default function WatercolorBuilder() {
           </button>
         </div>
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
-          <span className="font-caveat text-sm" style={{ color: "#6B5C52" }}>scroll to build</span>
+          <span className="font-eb-garamond text-sm" style={{ color: "#7A4A6E" }}>scroll to build</span>
           <svg width="16" height="24" viewBox="0 0 16 24" fill="none" className="animate-bounce">
-            <path d="M8 0 L8 20 M2 14 L8 20 L14 14" stroke="#6B5C52" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M8 0 L8 20 M2 14 L8 20 L14 14" stroke="#7A4A6E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
       </section>
@@ -272,7 +272,7 @@ export default function WatercolorBuilder() {
               ))}
             </span>
 
-            <p className="font-caveat text-sm opacity-50 -mb-2" style={{ color: "#6B5C52" }}>your cupcake preview</p>
+            <p className="font-eb-garamond text-sm opacity-50 -mb-2" style={{ color: "#7A4A6E" }}>your cupcake preview</p>
             <LivePreview build={build} />
             <div className="flex flex-wrap gap-1.5 justify-center">
               {build.flavor && <Chip color="#F2C9A8">{build.flavor}</Chip>}
@@ -313,10 +313,10 @@ export default function WatercolorBuilder() {
             <SectionWash color="#F2C9A8" />
             <div className="relative z-10 w-full max-w-xl lg:ml-[46%]">
               <StepPill number="01" label="Choose your base" color="#F2C9A8" />
-              <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>
+              <h2 className="font-eb-garamond italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#4A2545" }}>
                 What&apos;s the cake?
               </h2>
-              <p className="font-im-fell italic text-lg opacity-60 mb-10" style={{ color: "#6B5C52" }}>Every great cupcake starts here.</p>
+              <p className="font-eb-garamond italic text-lg opacity-60 mb-10" style={{ color: "#7A4A6E" }}>Every great cupcake starts here.</p>
               <div className="grid grid-cols-2 gap-5">
                 {[
                   { id: "vanilla" as Flavor,   label: "Vanilla",   desc: "pale golden cake", img: "/cupcakes/base-vanilla.png" },
@@ -324,8 +324,8 @@ export default function WatercolorBuilder() {
                 ].map(({ id, label, desc, img }) => (
                   <WcSelectionCard key={id} selected={build.flavor === id} onClick={() => { set("flavor", id); setTimeout(() => scrollToStep(2), 400); }} accentColor="#F2C9A8">
                     <div className="relative w-32 h-32 mx-auto"><Image src={img} alt={`${label} cupcake base`} fill sizes="128px" className="object-contain" /></div>
-                    <p className="font-caveat text-xl mt-2" style={{ color: "#3D2B1F" }}>{label}</p>
-                    <p className="font-im-fell italic text-xs opacity-50 mt-1" style={{ color: "#6B5C52" }}>{desc}</p>
+                    <p className="font-eb-garamond text-xl mt-2" style={{ color: "#4A2545" }}>{label}</p>
+                    <p className="font-eb-garamond italic text-xs opacity-50 mt-1" style={{ color: "#7A4A6E" }}>{desc}</p>
                   </WcSelectionCard>
                 ))}
               </div>
@@ -339,16 +339,16 @@ export default function WatercolorBuilder() {
             <SectionWash color="#C4AED8" />
             <div className="relative z-10 w-full max-w-xl lg:ml-[46%]">
               <StepPill number="02" label="Choose your frosting" color="#C4AED8" />
-              <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>
+              <h2 className="font-eb-garamond italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#4A2545" }}>
                 Paint the frosting.
               </h2>
-              <p className="font-im-fell italic text-lg opacity-60 mb-10" style={{ color: "#6B5C52" }}>How would you like your frosting?</p>
+              <p className="font-eb-garamond italic text-lg opacity-60 mb-10" style={{ color: "#7A4A6E" }}>How would you like your frosting?</p>
               <div className="grid grid-cols-3 gap-4 mb-8">
                 {FROSTING_OPTIONS.map(({ id, label, desc, img }) => (
                   <WcSelectionCard key={id} selected={build.frosting === id} onClick={() => set("frosting", id)} accentColor="#C4AED8">
                     <div className="relative w-16 h-16 sm:w-28 sm:h-28 mx-auto"><Image src={img} alt={label} fill sizes="(max-width: 640px) 64px, 112px" className="object-contain" /></div>
-                    <p className="font-caveat text-sm mt-2" style={{ color: "#3D2B1F" }}>{label}</p>
-                    <p className="font-im-fell italic text-xs opacity-50 mt-0.5 hidden sm:block" style={{ color: "#6B5C52" }}>{desc}</p>
+                    <p className="font-eb-garamond text-sm mt-2" style={{ color: "#4A2545" }}>{label}</p>
+                    <p className="font-eb-garamond italic text-xs opacity-50 mt-0.5 hidden sm:block" style={{ color: "#7A4A6E" }}>{desc}</p>
                   </WcSelectionCard>
                 ))}
               </div>
@@ -358,7 +358,7 @@ export default function WatercolorBuilder() {
                 <div className="rounded-2xl px-5 py-4 mb-6 flex items-start gap-3"
                   style={{ backgroundColor: "#F5F0E8", border: "1.5px solid #C4AED8" }}>
                   <span className="text-lg mt-0.5">✦</span>
-                  <p className="font-im-fell italic text-sm leading-relaxed" style={{ color: "#6B5C52" }}>
+                  <p className="font-eb-garamond italic text-sm leading-relaxed" style={{ color: "#7A4A6E" }}>
                     Rainbow frosting is a meringue cookie sitting on classic buttercream — vanilla or chocolate to match your cake base. No colour choices needed!
                   </p>
                 </div>
@@ -367,7 +367,7 @@ export default function WatercolorBuilder() {
               {/* Colour note textarea for 1-color and 3-color */}
               {(build.frosting === "1-color" || build.frosting === "3-color") && (
                 <div className="rounded-3xl p-6 space-y-3 mb-6" style={{ backgroundColor: "#FAF7F2", border: "1.5px solid #E8DDD4" }}>
-                  <p className="font-caveat text-lg" style={{ color: "#3D2B1F" }}>
+                  <p className="font-eb-garamond text-lg" style={{ color: "#4A2545" }}>
                     Tell Jo your colour wishes <span className="opacity-40 text-sm">(optional)</span>
                   </p>
                   <textarea
@@ -377,8 +377,8 @@ export default function WatercolorBuilder() {
                       ? "e.g. soft lavender, hot pink, classic white..."
                       : "e.g. pink, purple and mint, or pastels to match a rainbow theme..."}
                     rows={3}
-                    className="w-full rounded-xl px-4 py-3 font-im-fell italic resize-none outline-none transition-colors"
-                    style={{ border: "2px solid #E8DDD4", backgroundColor: "white", color: "#3D2B1F" }}
+                    className="w-full rounded-xl px-4 py-3 font-eb-garamond italic resize-none outline-none transition-colors"
+                    style={{ border: "2px solid #E8DDD4", backgroundColor: "white", color: "#4A2545" }}
                     onFocus={(e) => (e.target.style.borderColor = "#C4AED8")}
                     onBlur={(e) => (e.target.style.borderColor = "#E8DDD4")}
                   />
@@ -388,8 +388,8 @@ export default function WatercolorBuilder() {
               {build.frosting && (
                 <button
                   onClick={() => setTimeout(() => scrollToStep(3), 200)}
-                  className="font-caveat text-sm px-6 py-2.5 rounded-full"
-                  style={{ backgroundColor: "#C4AED8", color: "#3D2B1F" }}>
+                  className="font-eb-garamond text-sm px-6 py-2.5 rounded-full"
+                  style={{ backgroundColor: "#C4AED8", color: "#4A2545" }}>
                   Next ↓
                 </button>
               )}
@@ -404,8 +404,8 @@ export default function WatercolorBuilder() {
             <CornerSplash corner="bottom-right" color="#E8A0B0" size={200} className="absolute bottom-0 right-0" />
             <div className="relative z-10 w-full max-w-xl lg:ml-[46%]">
               <StepPill number="03" label="The finishing touch" color="#A8C8E8" />
-              <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>The finishing touch.</h2>
-              <p className="font-im-fell italic text-lg opacity-60 mb-6" style={{ color: "#6B5C52" }}>
+              <h2 className="font-eb-garamond italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#4A2545" }}>The finishing touch.</h2>
+              <p className="font-eb-garamond italic text-lg opacity-60 mb-6" style={{ color: "#7A4A6E" }}>
                 Add a finishing touch to bring your cupcakes to life.
               </p>
 
@@ -422,10 +422,10 @@ export default function WatercolorBuilder() {
                       setTopperKind(val);
                       if (val === "none") set("topper", "");
                     }}
-                    className="rounded-full px-4 py-2 font-caveat text-sm transition-all duration-200"
+                    className="rounded-full px-4 py-2 font-eb-garamond text-sm transition-all duration-200"
                     style={{
                       backgroundColor: topperKind === val ? "#A8C8E8" : "transparent",
-                      color: topperKind === val ? "#3D2B1F" : "#9A8F87",
+                      color: topperKind === val ? "#4A2545" : "#A688A0",
                       boxShadow: topperKind === val ? "0 2px 8px rgba(168,200,232,0.4)" : "none",
                     }}
                   >
@@ -435,8 +435,8 @@ export default function WatercolorBuilder() {
               </div>
               {/* Contextual description */}
               <p
-                className="font-im-fell italic text-sm mb-7 transition-opacity duration-200"
-                style={{ color: "#6B5C52", opacity: 0.55 }}
+                className="font-eb-garamond italic text-sm mb-7 transition-opacity duration-200"
+                style={{ color: "#7A4A6E", opacity: 0.55 }}
               >
                 {TOPPER_KIND_DESC[topperKind]}
               </p>
@@ -451,37 +451,37 @@ export default function WatercolorBuilder() {
                           </div>
                         ) : (
                           <div className="flex items-center justify-center rounded-2xl" style={{ width: 140, height: 140, backgroundColor: "#F5F0E8", border: "2px dashed #C4AED8" }}>
-                            <span className="font-caveat text-4xl" style={{ color: "#C4AED8" }}>?</span>
+                            <span className="font-eb-garamond text-4xl" style={{ color: "#C4AED8" }}>?</span>
                           </div>
                         )}
                       </div>
-                      <p className="font-caveat text-base" style={{ color: "#3D2B1F" }}>{label}</p>
+                      <p className="font-eb-garamond text-base" style={{ color: "#4A2545" }}>{label}</p>
                     </div>
                   </WcSelectionCard>
                 ))}
               </div>
               {topperKind !== "none" && build.topper === "custom" && (
                 <div className="rounded-3xl p-6 space-y-5" style={{ backgroundColor: "#FAF7F2", border: "1.5px solid #E8DDD4" }}>
-                  <p className="font-caveat text-lg" style={{ color: "#3D2B1F" }}>Tell Jo what you&apos;d love ✦</p>
+                  <p className="font-eb-garamond text-lg" style={{ color: "#4A2545" }}>Tell Jo what you&apos;d love ✦</p>
                   <label className="block space-y-2">
-                    <span className="font-caveat text-sm opacity-60" style={{ color: "#6B5C52" }}>Describe your topper</span>
+                    <span className="font-eb-garamond text-sm opacity-60" style={{ color: "#7A4A6E" }}>Describe your topper</span>
                     <textarea value={build.customTopperDesc} onChange={(e) => set("customTopperDesc", e.target.value)}
                       placeholder="e.g. a little dinosaur in a birthday hat, a mermaid with purple hair..."
                       rows={3}
-                      className="w-full rounded-xl px-4 py-3 font-im-fell italic resize-none outline-none transition-colors"
-                      style={{ border: "2px solid #E8DDD4", backgroundColor: "white", color: "#3D2B1F" }}
+                      className="w-full rounded-xl px-4 py-3 font-eb-garamond italic resize-none outline-none transition-colors"
+                      style={{ border: "2px solid #E8DDD4", backgroundColor: "white", color: "#4A2545" }}
                       onFocus={(e) => (e.target.style.borderColor = "#C4AED8")}
                       onBlur={(e) => (e.target.style.borderColor = "#E8DDD4")} />
                   </label>
                   <label className="block space-y-2">
-                    <span className="font-caveat text-sm opacity-60" style={{ color: "#6B5C52" }}>Reference image (optional)</span>
+                    <span className="font-eb-garamond text-sm opacity-60" style={{ color: "#7A4A6E" }}>Reference image (optional)</span>
                     {customImagePreview ? (
                       <div className="relative inline-block">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={customImagePreview} alt="Topper reference" className="max-h-36 rounded-xl object-cover" style={{ border: "2px solid #E8DDD4" }} />
                         {customImageUploading && (
                           <div className="absolute inset-0 flex items-center justify-center rounded-xl" style={{ backgroundColor: "rgba(250,247,242,0.8)" }}>
-                            <span className="font-caveat text-sm" style={{ color: "#D4788E" }}>Uploading…</span>
+                            <span className="font-eb-garamond text-sm" style={{ color: "#D4788E" }}>Uploading…</span>
                           </div>
                         )}
                         {!customImageUploading && (
@@ -495,12 +495,12 @@ export default function WatercolorBuilder() {
                         className="w-full rounded-xl py-8 flex flex-col items-center gap-1.5"
                         style={{ border: "2px dashed #C4AED8", backgroundColor: "transparent" }}>
                         <span className="text-2xl opacity-50">🖼</span>
-                        <span className="font-caveat text-sm" style={{ color: "#6B5C52" }}>Click to upload a reference image</span>
-                        <span className="font-im-fell italic text-xs opacity-40" style={{ color: "#6B5C52" }}>JPG, PNG · up to 10 MB</span>
+                        <span className="font-eb-garamond text-sm" style={{ color: "#7A4A6E" }}>Click to upload a reference image</span>
+                        <span className="font-eb-garamond italic text-xs opacity-40" style={{ color: "#7A4A6E" }}>JPG, PNG · up to 10 MB</span>
                       </button>
                     )}
                     <input ref={customFileRef} type="file" accept="image/*" className="hidden" onChange={handleCustomImage} />
-                    {customImageError && <p className="font-im-fell italic text-sm" style={{ color: "#C0392B" }}>{customImageError}</p>}
+                    {customImageError && <p className="font-eb-garamond italic text-sm" style={{ color: "#C0392B" }}>{customImageError}</p>}
                   </label>
                 </div>
               )}
@@ -515,8 +515,8 @@ export default function WatercolorBuilder() {
         <CornerSplash corner="bottom-right" color="#F0D898" size={180} className="absolute bottom-0 right-0" />
         <div className="relative z-10 max-w-2xl mx-auto">
           <div className="text-center mb-12">
-            <p className="font-caveat text-base opacity-50 mb-2" style={{ color: "#6B5C52" }}>— almost done —</p>
-            <h2 className="font-cormorant italic font-medium" style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)", color: "#3D2B1F" }}>Your cupcake order</h2>
+            <p className="font-eb-garamond text-base opacity-50 mb-2" style={{ color: "#7A4A6E" }}>— almost done —</p>
+            <h2 className="font-eb-garamond italic font-medium" style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)", color: "#4A2545" }}>Your cupcake order</h2>
           </div>
           <div className="rounded-3xl p-8 mb-8" style={{ backgroundColor: "#FAF7F2", boxShadow: "0 8px 48px rgba(107,92,82,0.10)", border: "1.5px solid #E8DDD4" }}>
             <div className="space-y-3 mb-8">
@@ -527,54 +527,54 @@ export default function WatercolorBuilder() {
               ].map(({ label, value, color, done, step }) => (
                 <div key={label} className="flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: done ? color : "#E8DDD4" }} />
-                  <span className="font-caveat text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#6B5C52" }}>{label}</span>
-                  <span className="font-im-fell italic capitalize text-sm flex-1" style={{ color: done ? "#3D2B1F" : "#C0B8B0" }}>{value}</span>
-                  {!done && <button onClick={() => scrollToStep(step)} className="font-caveat text-xs underline opacity-40 hover:opacity-70" style={{ color: "#6B5C52" }}>choose ↑</button>}
+                  <span className="font-eb-garamond text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#7A4A6E" }}>{label}</span>
+                  <span className="font-eb-garamond italic capitalize text-sm flex-1" style={{ color: done ? "#4A2545" : "#C0B8B0" }}>{value}</span>
+                  {!done && <button onClick={() => scrollToStep(step)} className="font-eb-garamond text-xs underline opacity-40 hover:opacity-70" style={{ color: "#7A4A6E" }}>choose ↑</button>}
                 </div>
               ))}
               {build.frostingColorNote && (
                 <div className="flex items-start gap-3 pt-1">
                   <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ backgroundColor: "#C4AED8" }} />
-                  <span className="font-caveat text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#6B5C52" }}>Colours</span>
-                  <span className="font-im-fell italic text-sm flex-1" style={{ color: "#3D2B1F" }}>{build.frostingColorNote}</span>
+                  <span className="font-eb-garamond text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#7A4A6E" }}>Colours</span>
+                  <span className="font-eb-garamond italic text-sm flex-1" style={{ color: "#4A2545" }}>{build.frostingColorNote}</span>
                 </div>
               )}
             </div>
             <div className="border-t pt-6" style={{ borderColor: "#E8DDD4" }}>
-              <p className="font-caveat text-sm opacity-60 mb-4" style={{ color: "#6B5C52" }}>How many cupcakes?</p>
+              <p className="font-eb-garamond text-sm opacity-60 mb-4" style={{ color: "#7A4A6E" }}>How many cupcakes?</p>
               <div className="grid grid-cols-3 gap-2">
                 {([6, 12, 18, 24, 36, 48] as Qty[]).map((q) => (
                   <button key={q} onClick={() => set("quantity", q)}
                     className="rounded-2xl py-3 flex flex-col items-center transition-all duration-200"
                     style={{ backgroundColor: build.quantity === q ? "#F2C9A8" : "#F5F0E8", border: build.quantity === q ? "2px solid #D4A870" : "2px solid transparent", boxShadow: build.quantity === q ? "0 4px 16px rgba(212,168,112,0.3)" : "none" }}>
-                    <span className="font-cormorant italic text-2xl font-medium" style={{ color: "#3D2B1F" }}>{q}</span>
-                    <span className="font-caveat text-xs opacity-60" style={{ color: "#6B5C52" }}>${priceForQty(q)}</span>
+                    <span className="font-eb-garamond italic text-2xl font-medium" style={{ color: "#4A2545" }}>{q}</span>
+                    <span className="font-eb-garamond text-xs opacity-60" style={{ color: "#7A4A6E" }}>${priceForQty(q)}</span>
                   </button>
                 ))}
               </div>
             </div>
             <div className="border-t mt-6 pt-6 space-y-2" style={{ borderColor: "#E8DDD4" }}>
               <div className="flex justify-between">
-                <span className="font-im-fell italic opacity-60" style={{ color: "#6B5C52" }}>{build.quantity} cupcakes</span>
-                <span className="font-cormorant italic text-lg" style={{ color: "#3D2B1F" }}>${basePrice}</span>
+                <span className="font-eb-garamond italic opacity-60" style={{ color: "#7A4A6E" }}>{build.quantity} cupcakes</span>
+                <span className="font-eb-garamond italic text-lg" style={{ color: "#4A2545" }}>${basePrice}</span>
               </div>
               {topperKind !== "none" && (
                 <div className="flex justify-between">
-                  <span className="font-im-fell italic opacity-60" style={{ color: "#6B5C52" }}>{TOPPER_KIND_LABEL[topperKind]}</span>
-                  <span className="font-cormorant italic text-lg" style={{ color: "#3D2B1F" }}>+${topperAddon.toFixed(2).replace(".00", "")}</span>
+                  <span className="font-eb-garamond italic opacity-60" style={{ color: "#7A4A6E" }}>{TOPPER_KIND_LABEL[topperKind]}</span>
+                  <span className="font-eb-garamond italic text-lg" style={{ color: "#4A2545" }}>+${topperAddon.toFixed(2).replace(".00", "")}</span>
                 </div>
               )}
               <div className="flex justify-between border-t pt-3" style={{ borderColor: "#E8DDD4" }}>
-                <span className="font-caveat text-lg font-bold" style={{ color: "#3D2B1F" }}>Total</span>
-                <span className="font-cormorant italic text-2xl font-medium" style={{ color: "#3D2B1F" }}>${total}</span>
+                <span className="font-eb-garamond text-lg font-bold" style={{ color: "#4A2545" }}>Total</span>
+                <span className="font-eb-garamond italic text-2xl font-medium" style={{ color: "#4A2545" }}>${total}</span>
               </div>
-              <p className="font-im-fell italic text-xs opacity-40 text-right" style={{ color: "#6B5C52" }}>+${ADDON_DELIVERY} delivery (Austin ISD) or free pickup</p>
+              <p className="font-eb-garamond italic text-xs opacity-40 text-right" style={{ color: "#7A4A6E" }}>+${ADDON_DELIVERY} delivery or free pickup</p>
             </div>
           </div>
           <div className="text-center">
             {!isComplete ? (
               <div>
-                <p className="font-caveat text-base opacity-50 mb-4" style={{ color: "#6B5C52" }}>Finish all steps above to continue</p>
+                <p className="font-eb-garamond text-base opacity-50 mb-4" style={{ color: "#7A4A6E" }}>Finish all steps above to continue</p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   {[
                     { label: "Base",     done: !!build.flavor,   step: 1 },
@@ -582,8 +582,8 @@ export default function WatercolorBuilder() {
                     { label: "Topper",   done: topperKind === "none" || !!build.topper, step: 3 },
                   ].map(({ label, done, step }) => (
                     <button key={label} onClick={() => scrollToStep(step)}
-                      className="rounded-full px-4 py-1.5 font-caveat text-sm transition-all"
-                      style={{ backgroundColor: done ? "#A8C8A833" : "#E8A0B033", border: done ? "1.5px solid #A8C8A8" : "1.5px solid #E8A0B0", color: "#3D2B1F" }}>
+                      className="rounded-full px-4 py-1.5 font-eb-garamond text-sm transition-all"
+                      style={{ backgroundColor: done ? "#A8C8A833" : "#E8A0B033", border: done ? "1.5px solid #A8C8A8" : "1.5px solid #E8A0B0", color: "#4A2545" }}>
                       {done ? "✓" : "\u2192"} {label}
                     </button>
                   ))}
@@ -594,7 +594,7 @@ export default function WatercolorBuilder() {
                 <button onClick={handleStartOrder} disabled={submitting} className="btn-primary text-xl px-12 py-5 w-full sm:w-auto">
                   {submitting ? "Just a moment..." : "✦ Place my order →"}
                 </button>
-                <p className="font-im-fell italic text-sm opacity-40 mt-4" style={{ color: "#6B5C52" }}>
+                <p className="font-eb-garamond italic text-sm opacity-40 mt-4" style={{ color: "#7A4A6E" }}>
                   You&apos;ll fill in your contact details on the next page.
                 </p>
               </div>
@@ -614,7 +614,7 @@ function LivePreview({ build }: { build: BuildState }) {
   if (!baseImg) {
     return (
       <div className="w-40 h-40 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#F5F0E8" }}>
-        <span className="font-caveat text-sm opacity-40" style={{ color: "#6B5C52" }}>choose a base ↓</span>
+        <span className="font-eb-garamond text-sm opacity-40" style={{ color: "#7A4A6E" }}>choose a base ↓</span>
       </div>
     );
   }
@@ -673,7 +673,7 @@ function MiniPreview({ build }: { build: BuildState }) {
         </div>
       )}
       {build.topper === "custom" && (
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 font-caveat text-lg leading-none font-bold" style={{ color: "#C4AED8" }}>?</div>
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 font-eb-garamond text-lg leading-none font-bold" style={{ color: "#C4AED8" }}>?</div>
       )}
     </div>
   );
@@ -684,11 +684,11 @@ function MobileStepChip({ children, done, color, onClick }: { children: React.Re
     <button
       type="button"
       onClick={onClick}
-      className="flex-1 min-w-0 font-caveat text-xs px-2 py-1 rounded-full capitalize transition-all truncate text-center"
+      className="flex-1 min-w-0 font-eb-garamond text-xs px-2 py-1 rounded-full capitalize transition-all truncate text-center"
       style={{
         backgroundColor: done ? color + "66" : "#F0EBE4",
         border: `1.5px solid ${done ? color : "#D8D0C8"}`,
-        color: "#3D2B1F",
+        color: "#4A2545",
       }}
     >
       {done ? "✓ " : ""}{children}
@@ -698,8 +698,8 @@ function MobileStepChip({ children, done, color, onClick }: { children: React.Re
 
 function Chip({ children, color }: { children: React.ReactNode; color: string }) {
   return (
-    <span className="font-caveat text-xs px-2.5 py-1 rounded-full capitalize"
-      style={{ backgroundColor: color + "44", border: `1px solid ${color}88`, color: "#3D2B1F" }}>
+    <span className="font-eb-garamond text-xs px-2.5 py-1 rounded-full capitalize"
+      style={{ backgroundColor: color + "44", border: `1px solid ${color}88`, color: "#4A2545" }}>
       {children}
     </span>
   );

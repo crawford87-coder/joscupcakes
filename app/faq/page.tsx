@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Divider } from "@/components/Decorative";
 
 export const metadata = {
   title: "FAQ — Jo's Cupcakes",
@@ -37,6 +36,14 @@ const faqs = [
     a: "Most toppers are printed cardstock on food-safe sticks, so not edible. Sprinkles and glitter are food-grade. If you need everything edible, just tell me and I'll confirm what I can do.",
   },
   {
+    q: "How does topper pricing work?",
+    a: "You can choose to keep your cupcakes simple or add a themed topper. Paper toppers are $0.50 per cupcake, and toy toppers are $1.50 per cupcake. This is all reflected in your total as you build your order.",
+  },
+  {
+    q: "What if I want something more custom?",
+    a: "If your request goes beyond my standard designs or requires special materials, I may adjust the price slightly. I'll always confirm any changes with you before your order is booked, so there are no surprises.",
+  },
+  {
     q: "Can I order more than 48 cupcakes?",
     a: "Yes, with enough notice. Email me at jo@jocrawford.me and we'll figure it out together before anything is booked.",
   },
@@ -49,36 +56,41 @@ const faqs = [
 export default function FaqPage() {
   return (
     <div className="max-w-2xl mx-auto px-6 pb-16 pt-12">
-      <p className="font-im-fell-sc text-rose-light text-sm tracking-[0.2em] uppercase mb-4">
+      <p className="font-eb-garamond text-sm tracking-wide opacity-50 mb-4" style={{ color: "#7A4A6E" }}>
         — good questions —
       </p>
-      <h1 className="font-cormorant italic text-berry text-5xl md:text-6xl font-medium mb-10">
+      <h1 className="font-eb-garamond italic font-medium leading-tight mb-10" style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)", color: "#4A2545" }}>
         The fine print{" "}
-        <span className="text-rose-light">(we&apos;ll keep it short)</span>
+        <span style={{ color: "#7A4A6E" }}>(we&apos;ll keep it short)</span>
       </h1>
 
       <div className="space-y-4">
         {faqs.map(({ q, a }, i) => (
-          <div key={i} className="card">
-            <h2 className="font-cormorant italic text-berry text-xl font-medium mb-2">
+          <div key={i} className="rounded-2xl p-6" style={{ backgroundColor: "#FAF7F2", border: "1.5px solid #E8DDD4" }}>
+            <h2 className="font-eb-garamond italic font-medium text-xl mb-2" style={{ color: "#4A2545" }}>
               {q}
             </h2>
-            <p className="font-im-fell italic text-plum leading-relaxed">{a}</p>
+            <p className="font-eb-garamond italic leading-relaxed" style={{ color: "#7A4A6E" }}>{a}</p>
           </div>
         ))}
       </div>
 
-      <Divider />
+      <div className="my-12 flex items-center gap-4">
+        <div className="flex-1 h-px" style={{ backgroundColor: "#E8DDD4" }} />
+        <span className="font-eb-garamond text-xl" style={{ color: "#D4A870" }}>✦</span>
+        <div className="flex-1 h-px" style={{ backgroundColor: "#E8DDD4" }} />
+      </div>
 
-      <p className="font-im-fell italic text-plum text-center text-lg mb-8">
+      <p className="font-eb-garamond italic text-center text-lg mb-8" style={{ color: "#7A4A6E" }}>
         Still unsure about something? Ask me. I&apos;ll walk you through it.
       </p>
 
       <div className="text-center">
         <Link href="/order" className="btn-primary">
-          ❖ Start your order
+          ✦ Start your order
         </Link>
       </div>
     </div>
   );
 }
+

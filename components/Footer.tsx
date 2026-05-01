@@ -5,20 +5,20 @@ export default function Footer() {
       style={{ backgroundColor: "#F5F0E8", borderTop: "1px solid #E8DDD4" }}
     >
       <div className="max-w-5xl mx-auto px-6 flex flex-col items-center gap-4 text-center">
-        <p className="font-caveat text-2xl" style={{ color: "#3D2B1F" }}>
+        <p className="font-caveat text-2xl" style={{ color: "#4A2545" }}>
           ✦ Jo&apos;s Cupcakes
         </p>
-        <p className="font-im-fell italic text-sm opacity-60" style={{ color: "#6B5C52" }}>
+        <p className="font-eb-garamond italic text-sm" style={{ color: "#7A4A6E" }}>
           Custom cupcakes for Austin&apos;s wildest birthday wishes ·{" "}
           <a
-            href="mailto:jo@joscupcakes.com"
+            href="mailto:jo@jocrawford.me"
             className="underline transition-opacity hover:opacity-100"
             style={{ color: "#D4788E" }}
           >
-            jo@joscupcakes.com
+            jo@jocrawford.me
           </a>
         </p>
-        <p className="font-caveat text-xs opacity-30" style={{ color: "#6B5C52" }}>
+        <p className="font-eb-garamond text-xs" style={{ color: "#7D5A7A" }}>
           Austin, TX · {new Date().getFullYear()}
         </p>
       </div>
