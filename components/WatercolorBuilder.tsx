@@ -227,7 +227,7 @@ export default function WatercolorBuilder() {
 
         {/* STICKY PREVIEW */}
         <div className="hidden lg:block sticky top-0 z-20" style={{ height: 0 }}>
-          <div className="rounded-3xl p-8 flex flex-col items-center gap-6"
+          <div className="rounded-3xl px-5 pt-4 pb-8 flex flex-col items-center gap-3"
             style={{ position: "absolute", top: "50vh", left: "23%", width: "clamp(240px, 38vw, 320px)", transform: "translate(-50%, -50%)", backgroundColor: "#FAF7F2", boxShadow: "0 8px 48px rgba(107,92,82,0.10)", border: "1.5px solid #E8DDD4" }}>
 
             {/* Orbiting sparkle ring 1 — clockwise */}
@@ -272,7 +272,7 @@ export default function WatercolorBuilder() {
               ))}
             </span>
 
-            <p className="font-eb-garamond text-sm opacity-50 -mb-2" style={{ color: "#7A4A6E" }}>your cupcake preview</p>
+            <p className="font-eb-garamond text-sm opacity-50" style={{ color: "#7A4A6E" }}>your cupcake preview</p>
             <LivePreview build={build} />
             <div className="flex flex-wrap gap-1.5 justify-center">
               {build.flavor && <Chip color="#F2C9A8">{build.flavor}</Chip>}
@@ -610,32 +610,33 @@ function LivePreview({ build }: { build: BuildState }) {
   const frostingImg = build.frosting ? FROSTING_OPTIONS.find((f) => f.id === build.frosting)?.img : null;
   const baseImg = build.flavor === "chocolate" ? "/cupcakes/base-choc.png" : build.flavor === "vanilla" ? "/cupcakes/base-vanilla.png" : null;
   const topperImg = build.topper && build.topper !== "custom" ? TOPPER_OPTIONS.find((t) => t.id === build.topper)?.img : null;
+  const previewLayerClass = "absolute inset-x-0 bottom-0 h-44";
 
   if (!baseImg) {
     return (
-      <div className="w-40 h-40 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#F5F0E8" }}>
+      <div className="w-56 h-44 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#F5F0E8" }}>
         <span className="font-eb-garamond text-sm opacity-40" style={{ color: "#7A4A6E" }}>choose a base ↓</span>
       </div>
     );
   }
 
   return (
-    <div className="relative w-40 h-48 mx-auto">
-      <div className="absolute inset-x-2 bottom-0 h-28">
-        <Image src={baseImg} alt="cake base" fill sizes="160px" className="object-contain object-bottom" />
+    <div className="relative w-56 h-44 mx-auto -mt-1">
+      <div className={previewLayerClass}>
+        <Image src={baseImg} alt="cake base" fill sizes="224px" className="object-contain object-bottom" />
       </div>
       {frostingImg && (
-        <div className="absolute inset-x-0 top-8 h-28">
-          <Image src={frostingImg} alt="frosting" fill sizes="160px" className="object-contain object-bottom" />
+        <div className={previewLayerClass}>
+          <Image src={frostingImg} alt="frosting" fill sizes="224px" className="object-contain object-bottom" />
         </div>
       )}
       {topperImg && (
-        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-16 h-16">
-          <Image src={topperImg} alt="topper" fill sizes="64px" className="object-contain" />
+        <div className={previewLayerClass}>
+          <Image src={topperImg} alt="topper" fill sizes="224px" className="object-contain object-bottom" />
         </div>
       )}
       {build.topper === "custom" && (
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-2xl">✏️</div>
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 text-2xl">✏️</div>
       )}
     </div>
   );
