@@ -3,10 +3,14 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
+  const configuredSiteUrl = process.env.SITE_URL?.trim();
+  const baseUrl = configuredSiteUrl && /^https?:\/\//i.test(configuredSiteUrl)
+    ? configuredSiteUrl.replace(/\/$/, "")
+    : origin;
   const code = searchParams.get("code");
 
   if (code) {
-    const res = NextResponse.redirect(`${origin}/admin`);
+    const res = NextResponse.redirect(`${baseUrl}/admin`);
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -28,5 +32,5 @@ export async function GET(req: NextRequest) {
   }
 
   // Something went wrong — send back to login
-  return NextResponse.redirect(`${origin}/admin/login?error=auth`);
+  return NextResponse.redirect(`${baseUrl}/admin/login?error=auth`);
 }
