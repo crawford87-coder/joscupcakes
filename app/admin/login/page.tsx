@@ -3,7 +3,6 @@
 export const dynamic = "force-dynamic";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Sparkle } from "@/components/Decorative";
 
 export default function AdminLoginPage() {
@@ -11,26 +10,35 @@ export default function AdminLoginPage() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
 
   async function handleSendLink(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (otpError) {
+
+    try {
+      const response = await fetch("/api/admin/auth/magic-link", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        setError(payload?.error ?? "Could not send link. Check the email address and try again.");
+        setLoading(false);
+        return;
+      }
+
+      setSent(true);
+      setLoading(false);
+    } catch {
       setError("Could not send link. Check the email address and try again.");
       setLoading(false);
       return;
     }
-    setSent(true);
-    setLoading(false);
   }
 
   return (
