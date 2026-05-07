@@ -710,17 +710,41 @@ function LivePreview({ build, width = 140 }: { build: BuildState; width?: number
 
       {/* Base */}
       {layerUrls[baseFile] && (
-        <img src={layerUrls[baseFile]} alt="cupcake base" style={layer} draggable={false} />
+        <Image
+          src={layerUrls[baseFile]}
+          alt="cupcake base"
+          width={width}
+          height={H}
+          style={layer}
+          unoptimized
+          draggable={false}
+        />
       )}
 
       {/* Frosting */}
       {frostFile && layerUrls[frostFile] && (
-        <img src={layerUrls[frostFile]} alt="frosting" style={layer} draggable={false} />
+        <Image
+          src={layerUrls[frostFile]}
+          alt="frosting"
+          width={width}
+          height={H}
+          style={layer}
+          unoptimized
+          draggable={false}
+        />
       )}
 
       {/* Topper */}
       {topFile && layerUrls[topFile] && (
-        <img src={layerUrls[topFile]} alt="topper" style={layer} draggable={false} />
+        <Image
+          src={layerUrls[topFile]}
+          alt="topper"
+          width={width}
+          height={H}
+          style={layer}
+          unoptimized
+          draggable={false}
+        />
       )}
     </div>
   );
