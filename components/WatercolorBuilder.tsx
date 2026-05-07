@@ -15,7 +15,6 @@ import {
 } from "./WatercolorUI";
 import { PRICES_NO_TOPPER, ADDON_DELIVERY } from "@/lib/pricing";
 import { stripBlackBg } from "@/lib/stripBlackBg";
-import { CUPCAKE_ANCHORS } from "@/lib/cupcakeAnchors";
 
 type TopperChoice = "" | "paper" | "toy" | "custom";
 const TOPPER_RATE: Record<string, number> = { paper: 0.5, toy: 1.5 };
@@ -307,7 +306,7 @@ export default function WatercolorBuilder() {
             style={{ backgroundColor: "rgba(250,247,242,0.97)", borderBottom: "1px solid #E8DDD4", backdropFilter: "blur(8px)" }}
           >
             {/* Mini cupcake */}
-            <div className="flex-shrink-0 relative" style={{ width: 72, height: 84 }}>
+            <div className="flex-shrink-0">
               <MiniPreview build={build} />
             </div>
             {/* Step chips */}
@@ -710,84 +709,44 @@ function LivePreview({ build, width = 140 }: { build: BuildState; width?: number
     );
   }
 
-  // ── Anchor-based positioning ─────────────────────────────────────────
-  const ASPECT = 1100 / 1875;
-  const H = width / ASPECT;
-
-  const baseAnchorFile = build.flavor === "chocolate" ? "base-choc.png" : "base-vanilla.png";
-  const baseA  = CUPCAKE_ANCHORS[baseAnchorFile];
-  const frostA = frostFile ? CUPCAKE_ANCHORS[frostFile] : null;
-  const topA   = topFile   ? CUPCAKE_ANCHORS[topFile]   : null;
-
-  // Compute positions with baseTop = 0 as reference, growing downward
-  const baseVisibleTop = H * baseA.top;
-
-  const SEAM = H * 0.033; // overlap to hide watercolor feathered edges at layer boundaries
-
-  let frostTop_r: number | null = null;
-  let frostVisibleTop: number | null = null;
-  if (frostA) {
-    frostTop_r    = baseVisibleTop - H * frostA.bottom + SEAM;
-    frostVisibleTop = frostTop_r + H * frostA.top;
-  }
-
-  let topTop_r: number | null = null;
-  if (topA) {
-    const apex = frostVisibleTop ?? baseVisibleTop;
-    topTop_r = apex - H * topA.bottom + SEAM;
-  }
-
-  // Shift everything so the topmost layer starts at y = 0
-  const minY  = Math.min(0, frostTop_r ?? 0, topTop_r ?? 0);
-  const shift = minY < 0 ? -minY : 0;
-
-  const baseTopFinal  = shift;
-  const frostTopFinal = frostTop_r !== null ? frostTop_r + shift : null;
-  const topTopFinal   = topTop_r   !== null ? topTop_r   + shift : null;
-  const containerH    = baseTopFinal + H * baseA.bottom;
-
-  const layer = (top: number): CSSProperties => ({
-    position: "absolute", top, left: 0, width, height: H, userSelect: "none",
-  });
-
+  const H = Math.round(width * (1875 / 1100) * 100) / 100;
+  const layer: CSSProperties = { position: "absolute", bottom: 0, left: 0, width, height: H, userSelect: "none" };
   const isHalfHalf = build.flavor === "half-half";
+  const baseFile = build.flavor === "chocolate" ? "base-choc.png" : "base-vanilla.png";
 
-  // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div style={{ position: "relative", width, height: containerH, flexShrink: 0 }}>
+    <div style={{ position: "relative", width, height: H, flexShrink: 0 }}>
 
       {/* Base */}
       {isHalfHalf ? (
         layerUrls["base-vanilla.png"] && layerUrls["base-choc.png"] && (
-          <div style={{ position: "absolute", top: baseTopFinal, width, height: H, display: "flex", overflow: "hidden" }}>
+          <div style={{ position: "absolute", bottom: 0, left: 0, width, height: H, display: "flex", overflow: "hidden" }}>
             <div style={{ width: width / 2, height: H, overflow: "hidden", position: "relative", flexShrink: 0 }}>
               <img src={layerUrls["base-vanilla.png"]} alt="vanilla half"
-                style={{ position: "absolute", top: 0, left: 0, width, height: H, userSelect: "none" }} draggable={false} />
+                style={{ position: "absolute", bottom: 0, left: 0, width, height: H, userSelect: "none" }} draggable={false} />
             </div>
             <div style={{ width: width / 2, height: H, overflow: "hidden", position: "relative", flexShrink: 0 }}>
               <img src={layerUrls["base-choc.png"]} alt="chocolate half"
-                style={{ position: "absolute", top: 0, left: -(width / 2), width, height: H, userSelect: "none" }} draggable={false} />
+                style={{ position: "absolute", bottom: 0, left: -(width / 2), width, height: H, userSelect: "none" }} draggable={false} />
             </div>
           </div>
         )
       ) : (
-        layerUrls[baseAnchorFile] && (
-          <img src={layerUrls[baseAnchorFile]}
+        layerUrls[baseFile] && (
+          <img src={layerUrls[baseFile]}
             alt={build.flavor === "chocolate" ? "chocolate base" : "vanilla base"}
-            style={layer(baseTopFinal)} draggable={false} />
+            style={layer} draggable={false} />
         )
       )}
 
       {/* Frosting */}
-      {frostFile && frostTopFinal !== null && layerUrls[frostFile] && (
-        <img src={layerUrls[frostFile]} alt="frosting"
-          style={layer(frostTopFinal)} draggable={false} />
+      {frostFile && layerUrls[frostFile] && (
+        <img src={layerUrls[frostFile]} alt="frosting" style={layer} draggable={false} />
       )}
 
       {/* Topper */}
-      {topFile && topTopFinal !== null && layerUrls[topFile] && (
-        <img src={layerUrls[topFile]} alt="topper"
-          style={layer(topTopFinal)} draggable={false} />
+      {topFile && layerUrls[topFile] && (
+        <img src={layerUrls[topFile]} alt="topper" style={layer} draggable={false} />
       )}
     </div>
   );
@@ -799,36 +758,36 @@ function MiniPreview({ build }: { build: BuildState }) {
   const frostingImg = build.frosting ? FROSTING_OPTIONS.find((f) => f.id === build.frosting)?.img : null;
   if (!baseImg && !isHalfHalf) {
     return (
-      <div className="w-full h-full rounded-xl flex items-center justify-center" style={{ backgroundColor: "#F5F0E8" }}>
+      <div className="w-40 h-48 mx-auto rounded-xl flex items-center justify-center" style={{ backgroundColor: "#F5F0E8" }}>
         <span className="text-lg opacity-30">🧁</span>
       </div>
     );
   }
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-40 h-48 mx-auto">
       {isHalfHalf ? (
-        <div className="absolute bottom-2 inset-x-0 h-14 flex overflow-hidden">
+        <div className="absolute inset-x-2 bottom-0 h-28 flex overflow-hidden">
           <div className="relative flex-1 h-full">
-            <Image src="/cupcakes/base-vanilla.png" alt="vanilla half" fill sizes="36px" className="object-contain object-bottom" />
+            <Image src="/cupcakes/base-vanilla.png" alt="vanilla half" fill sizes="80px" className="object-contain object-bottom" />
           </div>
           <div className="relative flex-1 h-full">
-            <Image src="/cupcakes/base-choc.png" alt="chocolate half" fill sizes="36px" className="object-contain object-bottom" />
+            <Image src="/cupcakes/base-choc.png" alt="chocolate half" fill sizes="80px" className="object-contain object-bottom" />
           </div>
         </div>
       ) : (
-        <div className="absolute bottom-2 inset-x-0 h-14">
-          <Image src={baseImg!} alt="base" fill sizes="72px" className="object-contain object-bottom" />
+        <div className="absolute inset-x-2 bottom-0 h-28">
+          <Image src={baseImg!} alt="base" fill sizes="160px" className="object-contain object-bottom" />
         </div>
       )}
       {frostingImg && (
-        <div className="absolute bottom-4 inset-x-0 h-14">
-          <Image src={frostingImg} alt="frosting" fill sizes="72px" className="object-contain object-bottom" />
+        <div className="absolute inset-x-2 bottom-0 h-28">
+          <Image src={frostingImg} alt="frosting" fill sizes="160px" className="object-contain object-bottom" />
         </div>
       )}
       {build.topperChoice && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-12">
-          <Image src={TOPPER_IMAGES[build.topperChoice]} alt="topper" fill sizes="40px" className="object-contain object-top" />
+        <div className="absolute inset-x-2 bottom-0 h-28">
+          <Image src={TOPPER_IMAGES[build.topperChoice]} alt="topper" fill sizes="160px" className="object-contain object-bottom" />
         </div>
       )}
     </div>
