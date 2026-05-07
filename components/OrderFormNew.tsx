@@ -16,23 +16,21 @@ import {
 // ── Label maps ────────────────────────────────────────────────
 
 const FLAVOR_LABELS: Record<string, string> = {
-  vanilla: "Vanilla",
-  chocolate: "Chocolate",
+  vanilla:     "Vanilla",
+  chocolate:   "Chocolate",
+  "half-half": "Half vanilla, half chocolate",
 };
 
 const FROSTING_LABELS: Record<string, string> = {
-  "1-color": "1-colour frosting",
-  "3-color": "3-colour frosting",
+  "1-color": "1-color frosting",
+  "3-color": "3-color frosting",
   "rainbow": "Rainbow frosting",
 };
 
-const TOPPER_LABELS: Record<string, string> = {
-  unicorn: "Unicorn topper",
-  safari: "Safari topper",
-  "cats-dogs": "Cats & dogs topper",
-  dinosaurs: "Dinosaurs topper",
-  fairies: "Fairies topper",
-  butterflies: "Butterflies topper",
+const TOPPER_KIND_LABELS: Record<string, string> = {
+  paper:  "Paper topper",
+  toy:    "Toy topper",
+  custom: "Custom topper",
 };
 
 // ── Types ─────────────────────────────────────────────────────
@@ -69,14 +67,14 @@ export default function OrderForm() {
   const searchParams = useSearchParams();
 
   // Selections from the builder (all from URL params)
-  const flavor = (searchParams.get("flavor") || "vanilla") as "vanilla" | "chocolate";
+  const flavor = (searchParams.get("flavor") || "vanilla") as "vanilla" | "chocolate" | "half-half";
   const frostingType = searchParams.get("frostingType") || "1-color";
   const frostingColorNote = searchParams.get("frostingColorNote") || "";
-  const topperDesc = searchParams.get("topperDesc") || ""; // unicorn|safari|etc
+  const topperKind = searchParams.get("topperKind") || ""; // paper|toy|custom|""
   const rawQty = Number(searchParams.get("qty") || "12");
   const qty = ([6, 12, 18, 24, 36, 48].includes(rawQty) ? rawQty : 12) as 6 | 12 | 18 | 24 | 36 | 48;
 
-  const hasTopper = !!topperDesc;
+  const hasTopper = !!topperKind && topperKind !== "custom";
 
   // Form state
   const [form, setForm] = useState<FormState>(INITIAL);
@@ -225,10 +223,10 @@ export default function OrderForm() {
           quantity: qty,
           flavor,
           icingColors: [frostingType],
-          topper: hasTopper,
-          topperDescription: topperDesc || null,
+          topper: !!topperKind,
+          topperDescription: topperKind || null,
           sprinklesOrGlitter: null,
-          notes: [frostingColorNote ? `Frosting colours: ${frostingColorNote}` : "", form.notes || ""].filter(Boolean).join("\n\n") || null,
+          notes: [frostingColorNote ? `Frosting colors: ${frostingColorNote}` : "", form.notes || ""].filter(Boolean).join("\n\n") || null,
           referenceImageUrl: imageUrl || null,
         }),
       });
@@ -252,15 +250,10 @@ export default function OrderForm() {
 
   const summaryItems = [
     { label: "Quantity", value: `${qty} cupcakes`, price: `$${PRICES[qty]}` },
-    { label: "Flavour", value: FLAVOR_LABELS[flavor] ?? flavor },
+    { label: "Flavor", value: FLAVOR_LABELS[flavor] ?? flavor },
     { label: "Frosting", value: FROSTING_LABELS[frostingType] ?? frostingType },
-    ...(frostingColorNote
-      ? [{ label: "Colours", value: frostingColorNote }]
-      : []),
-    {
-      label: "Topper",
-      value: TOPPER_LABELS[topperDesc] ?? topperDesc,
-    },
+    ...(frostingColorNote ? [{ label: "Colors", value: frostingColorNote }] : []),
+    ...(topperKind ? [{ label: "Topper", value: TOPPER_KIND_LABELS[topperKind] ?? topperKind, price: topperKind === "custom" ? "Jo will quote" : undefined }] : []),
     ...(form.fulfillment === "delivery"
       ? [{ label: "Delivery", value: "Austin delivery", price: `+$${ADDON_DELIVERY}` }]
       : []),
@@ -452,7 +445,7 @@ export default function OrderForm() {
       <section className="space-y-4">
         <SectionHeading>Special requests</SectionHeading>
         <p className="font-eb-garamond italic text-sm opacity-60" style={{ color: "#7A4A6E" }}>
-          Allergies, specific colours, a message on the box — anything goes.
+          Allergies, specific colors, a message on the box — anything goes.
         </p>
         <textarea
           value={form.notes}
@@ -571,7 +564,7 @@ export default function OrderForm() {
         <button
           type="submit"
           disabled={submitting || imageUploading}
-          className="font-eb-garamond text-xl px-12 py-4 rounded-pill transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="font-eb-garamond text-xl px-12 py-4 rounded-pill transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
           style={{
             backgroundColor: "#D4788E",
             color: "white",
@@ -660,7 +653,7 @@ function WcDivider() {
 function SuccessScreen({ referenceNumber }: { referenceNumber: string }) {
   return (
     <div
-      className="rounded-3xl p-10 text-center space-y-6 max-w-lg mx-auto"
+      className="rounded-3xl p-6 sm:p-10 text-center space-y-6 max-w-lg mx-auto"
       style={{ backgroundColor: "#F5F0E8", border: "1px solid #E8DDD4" }}
     >
       <div className="text-5xl">✦</div>

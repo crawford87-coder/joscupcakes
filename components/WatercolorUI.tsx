@@ -188,7 +188,7 @@ export function WcSelectionCard({
   return (
     <button
       onClick={onClick}
-      className={`relative rounded-3xl p-5 text-center transition-all duration-300 bg-wc-cream ${className}`}
+      className={`relative rounded-3xl p-3 sm:p-5 text-center transition-all duration-300 bg-wc-cream ${className}`}
       style={{
         border: selected ? `2px solid ${accentColor}` : "2px solid transparent",
         boxShadow: selected

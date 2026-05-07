@@ -42,7 +42,7 @@ const STATUS_LABELS: Record<Status, string> = {
   in_progress: "In Progress",
   ready: "Ready",
   delivered: "Delivered",
-  cancelled: "Cancelled",
+  cancelled: "Canceled",
 };
 
 const STATUS_COLORS: Record<Status, string> = {

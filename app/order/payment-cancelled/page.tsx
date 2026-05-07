@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export const metadata = { title: "Payment cancelled — Jo's Cupcakes" };
+export const metadata = { title: "Payment canceled — Jo's Cupcakes" };
 
 export default async function PaymentCancelledPage({
   searchParams,

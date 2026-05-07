@@ -24,7 +24,7 @@ export default async function GalleryPage() {
           — the work —
         </p>
         <h1 className="font-eb-garamond italic font-medium leading-tight mb-4" style={{ fontSize: "clamp(2.5rem, 7vw, 4.5rem)", color: "#4A2545" }}>
-          A few favourites
+          A few favorites
         </h1>
         <p className="font-eb-garamond italic text-lg opacity-70 max-w-xl" style={{ color: "#7A4A6E" }}>
           Every batch is made from scratch, just for your kid&apos;s big day.

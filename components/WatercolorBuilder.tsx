@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
@@ -13,26 +14,21 @@ import {
   StepProgress,
 } from "./WatercolorUI";
 import { PRICES_NO_TOPPER, ADDON_DELIVERY } from "@/lib/pricing";
+import { stripBlackBg } from "@/lib/stripBlackBg";
+import { CUPCAKE_ANCHORS } from "@/lib/cupcakeAnchors";
 
-type TopperKind = "none" | "paper" | "toy";
-const TOPPER_RATE: Record<TopperKind, number> = { none: 0, paper: 0.5, toy: 1.5 };
-const TOPPER_KIND_LABEL: Record<TopperKind, string> = { none: "No topper", paper: "Paper topper", toy: "Toy topper" };
-const TOPPER_KIND_DESC: Record<TopperKind, string> = {
-  none:  "Simple, frosting-only finish",
-  paper: "Lightweight printed designs for a playful finish",
-  toy:   "Keepsake toppers for an extra special touch",
-};
+type TopperChoice = "" | "paper" | "toy" | "custom";
+const TOPPER_RATE: Record<string, number> = { paper: 0.5, toy: 1.5 };
 
-type Flavor = "vanilla" | "chocolate" | "";
+type Flavor = "vanilla" | "chocolate" | "half-half" | "";
 type FrostingType = "1-color" | "3-color" | "rainbow" | "";
-type TopperType = "unicorn" | "safari" | "pets" | "dinosaur" | "fairy" | "custom" | "";
 type Qty = 6 | 12 | 18 | 24 | 36 | 48;
 
 interface BuildState {
   flavor: Flavor;
   frosting: FrostingType;
   frostingColorNote: string;
-  topper: TopperType;
+  topperChoice: TopperChoice;
   customTopperDesc: string;
   customTopperImageUrl: string | null;
   quantity: Qty;
@@ -42,7 +38,7 @@ const INITIAL: BuildState = {
   flavor: "",
   frosting: "",
   frostingColorNote: "",
-  topper: "",
+  topperChoice: "",
   customTopperDesc: "",
   customTopperImageUrl: null,
   quantity: 12,
@@ -55,32 +51,53 @@ const STEP_COLORS = [
 ];
 
 const FROSTING_OPTIONS: { id: FrostingType; label: string; desc: string; img: string }[] = [
-  { id: "1-color", label: "1 colour",  desc: "one dreamy swirl",              img: "/cupcakes/swirl-single.png" },
-  { id: "3-color", label: "3 colours", desc: "triple swirl",                  img: "/cupcakes/swirl-triple.png" },
-  { id: "rainbow", label: "Rainbow",   desc: "meringue cookie on buttercream", img: "/cupcakes/swirl-rainbow.png" },
+  { id: "1-color", label: "1 color",  desc: "one dreamy swirl",              img: "/cupcakes/swirl-single.png" },
+  { id: "3-color", label: "3 colors", desc: "triple swirl",                  img: "/cupcakes/swirl-triple.png" },
+  { id: "rainbow", label: "Rainbow meringue", desc: "meringue on buttercream", img: "/cupcakes/swirl-rainbow.png" },
 ];
 
-const TOPPER_OPTIONS: { id: TopperType; label: string; img: string }[] = [
-  { id: "unicorn",  label: "Unicorn",    img: "/cupcakes/topper-unicorn.png" },
-  { id: "safari",   label: "Safari",     img: "/cupcakes/topper-safari.png" },
-  { id: "pets",     label: "Pets",       img: "/cupcakes/topper-pets.png" },
-  { id: "dinosaur", label: "Dinosaurs",  img: "/cupcakes/topper-dinosaur.png" },
-  { id: "fairy",    label: "Fairies",    img: "/cupcakes/topper-fairy.png" },
-  { id: "custom",   label: "Custom \u2726", img: "" },
-];
+
+const TOPPER_IMAGES: Record<string, string> = {
+  paper:  "/cupcakes/topper-fairy.png",
+  toy:    "/cupcakes/topper-dinosaur.png",
+  custom: "/cupcakes/topper-unicorn.png",
+};
+
+const FLAVOR_DISPLAY: Record<string, string> = {
+  vanilla:    "Vanilla",
+  chocolate:  "Chocolate",
+  "half-half": "Half & Half",
+};
 
 export default function WatercolorBuilder() {
   const router = useRouter();
   const [build, setBuild] = useState<BuildState>(INITIAL);
   const [activeStep, setActiveStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [topperKind, setTopperKind] = useState<TopperKind>("none");
   const [customImagePreview, setCustomImagePreview] = useState<string | null>(null);
   const [customImageUploading, setCustomImageUploading] = useState(false);
   const [customImageError, setCustomImageError] = useState<string | null>(null);
   const customFileRef = useRef<HTMLInputElement>(null);
   // 0=hero, 1=base, 2=frosting, 3=topper
   const stepRefs = useRef<(HTMLElement | null)[]>([null, null, null, null]);
+  const summaryRef = useRef<HTMLElement | null>(null);
+  const stickyCardRef = useRef<HTMLDivElement | null>(null);
+  const [previewVisible, setPreviewVisible] = useState(true);
+  const scrollToSummary = useCallback(() => {
+    summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  useEffect(() => {
+    const check = () => {
+      if (!stickyCardRef.current || !summaryRef.current) return;
+      const cardBottom = stickyCardRef.current.getBoundingClientRect().bottom;
+      const summaryTop = summaryRef.current.getBoundingClientRect().top;
+      setPreviewVisible(summaryTop - cardBottom >= 8);
+    };
+    check();
+    window.addEventListener("scroll", check, { passive: true });
+    return () => window.removeEventListener("scroll", check);
+  }, []);
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -132,15 +149,15 @@ export default function WatercolorBuilder() {
   const completedSteps = [
     build.flavor ? 0 : -1,
     build.frosting ? 1 : -1,
-    (topperKind === "none" || build.topper) ? 2 : -1,
+    build.topperChoice ? 2 : -1,
   ].filter((n) => n >= 0);
 
-  const isComplete = !!(build.flavor && build.frosting && (topperKind === "none" || build.topper));
-  const topperAddon = Math.round(TOPPER_RATE[topperKind] * build.quantity * 100) / 100;
+  const isComplete = !!(build.flavor && build.frosting);
+  const topperAddon = Math.round((TOPPER_RATE[build.topperChoice] ?? 0) * build.quantity * 100) / 100;
   const basePrice = PRICES_NO_TOPPER[build.quantity] ?? 0;
   const total = basePrice + topperAddon;
-  const priceForQty = (q: number) => (PRICES_NO_TOPPER[q] ?? 0) + Math.round(TOPPER_RATE[topperKind] * q * 100) / 100;
-  const topperLabel = build.topper === "custom" ? "Custom topper" : TOPPER_OPTIONS.find((t) => t.id === build.topper)?.label ?? "";
+  const priceForQty = (q: number) => (PRICES_NO_TOPPER[q] ?? 0) + Math.round((TOPPER_RATE[build.topperChoice] ?? 0) * q * 100) / 100;
+  const topperLabel = build.topperChoice === "paper" ? "Paper topper" : build.topperChoice === "toy" ? "Toy topper" : build.topperChoice === "custom" ? "Custom topper" : "";
   const frostingLabel = FROSTING_OPTIONS.find((f) => f.id === build.frosting)?.label ?? "";
 
   function handleStartOrder() {
@@ -148,8 +165,7 @@ export default function WatercolorBuilder() {
     if (build.flavor) params.set("flavor", build.flavor);
     if (build.frosting) params.set("frostingType", build.frosting);
     if (build.frostingColorNote) params.set("frostingColorNote", build.frostingColorNote);
-    if (build.topper) params.set("topperDesc", build.topper);
-    if (topperKind !== "none") params.set("topperKind", topperKind);
+    if (build.topperChoice) params.set("topperKind", build.topperChoice);
     if (build.customTopperDesc) params.set("customTopperDesc", build.customTopperDesc);
     if (build.customTopperImageUrl) params.set("customTopperImageUrl", build.customTopperImageUrl);
     params.set("qty", String(build.quantity));
@@ -172,7 +188,7 @@ export default function WatercolorBuilder() {
         <div className="relative z-10 max-w-3xl mx-auto">
           <div className="flex justify-center mb-8">
             <div className="relative w-[min(480px,85vw)] aspect-[4/3] drop-shadow-xl">
-              <Image src="/cupcakes/hero.png" alt="Five beautifully decorated watercolour cupcakes" fill sizes="(max-width: 768px) 85vw, 480px" className="object-contain" priority />
+              <Image src="/cupcakes/hero.png" alt="Five beautifully decorated watercolor cupcakes" fill sizes="(max-width: 768px) 85vw, 480px" className="object-contain" priority />
             </div>
           </div>
           <div className="relative mb-6">
@@ -184,7 +200,7 @@ export default function WatercolorBuilder() {
               <span className="sp sp-md sp-rose   sp-a3"  style={{ left:"6%",  top:"65%", animationDuration:"2.5s", animationDelay:"0.7s"   }} />
               <span className="sp sp-lg sp-peach  sp-a8"  style={{ left:"15%", top:"55%", animationDuration:"3.0s", animationDelay:"1.1s"   }} />
               <span className="sp sp-sm sp-gold   sp-a6"  style={{ left:"10%", top:"30%", animationDuration:"1.9s", animationDelay:"0.5s"   }} />
-              {/* Cluster 2 — centre */}
+              {/* Cluster 2 — center */}
               <span className="sp sp-xl sp-white  sp-a2"  style={{ left:"45%", top:"45%", animationDuration:"2.6s", animationDelay:"0.2s"   }} />
               <span className="sp sp-lg sp-gold   sp-a9"  style={{ left:"50%", top:"60%", animationDuration:"3.1s", animationDelay:"0.8s"   }} />
               <span className="sp sp-md sp-lavender sp-a4" style={{ left:"42%", top:"30%", animationDuration:"2.4s", animationDelay:"1.4s"   }} />
@@ -210,7 +226,7 @@ export default function WatercolorBuilder() {
           <p className="font-eb-garamond italic text-xl leading-relaxed mb-10 opacity-70" style={{ color: "#7A4A6E" }}>
             Pick your base, frosting and topper. Then we&apos;ll bake the magic.
           </p>
-          <button onClick={() => scrollToStep(1)} className="btn-primary text-xl px-12 py-4">
+          <button onClick={() => scrollToStep(1)} className="btn-primary text-xl px-8 sm:px-12 py-4 w-full sm:w-auto justify-center">
             Start Building ↓
           </button>
         </div>
@@ -227,8 +243,10 @@ export default function WatercolorBuilder() {
 
         {/* STICKY PREVIEW */}
         <div className="hidden lg:block sticky top-0 z-20" style={{ height: 0 }}>
-          <div className="rounded-3xl px-5 pt-4 pb-8 flex flex-col items-center gap-3"
-            style={{ position: "absolute", top: "50vh", left: "23%", width: "clamp(240px, 38vw, 320px)", transform: "translate(-50%, -50%)", backgroundColor: "#FAF7F2", boxShadow: "0 8px 48px rgba(107,92,82,0.10)", border: "1.5px solid #E8DDD4" }}>
+          <div
+            ref={stickyCardRef}
+            className="rounded-3xl p-8 flex flex-col items-center gap-6"
+            style={{ position: "absolute", top: "50vh", left: "23%", width: "clamp(240px, 38vw, 320px)", transform: "translate(-50%, -50%)", backgroundColor: "#FAF7F2", boxShadow: "0 8px 48px rgba(107,92,82,0.10)", border: "1.5px solid #E8DDD4", opacity: previewVisible ? 1 : 0, transition: "opacity 200ms ease", pointerEvents: previewVisible ? "auto" : "none" }}>
 
             {/* Orbiting sparkle ring 1 — clockwise */}
             <span aria-hidden="true" className="orbit-ring pointer-events-none absolute" style={{ inset: -24 }}>
@@ -275,9 +293,9 @@ export default function WatercolorBuilder() {
             <p className="font-eb-garamond text-sm opacity-50" style={{ color: "#7A4A6E" }}>your cupcake preview</p>
             <LivePreview build={build} />
             <div className="flex flex-wrap gap-1.5 justify-center">
-              {build.flavor && <Chip color="#F2C9A8">{build.flavor}</Chip>}
+              {build.flavor && <Chip color="#F2C9A8">{FLAVOR_DISPLAY[build.flavor] ?? build.flavor}</Chip>}
               {build.frosting && <Chip color="#C4AED8">{frostingLabel}</Chip>}
-              {build.topper && <Chip color="#A8C8E8">{topperLabel}</Chip>}
+              {build.topperChoice && <Chip color="#A8C8E8">{topperLabel}</Chip>}
             </div>
             <StepProgress steps={STEP_COLORS} activeStep={Math.max(0, activeStep - 1)} completedSteps={completedSteps} onStepClick={(i) => scrollToStep(i + 1)} />
           </div>
@@ -295,14 +313,14 @@ export default function WatercolorBuilder() {
             {/* Step chips */}
             <div className="flex items-center gap-1 min-w-0 flex-1">
               <MobileStepChip done={!!build.flavor} color="#F2C9A8" onClick={() => scrollToStep(1)}>
-                {build.flavor || "Base"}
+                {(build.flavor && FLAVOR_DISPLAY[build.flavor]) || "Base"}
               </MobileStepChip>
               <span className="opacity-30 text-xs flex-shrink-0">›</span>
               <MobileStepChip done={!!build.frosting} color="#C4AED8" onClick={() => scrollToStep(2)}>
                 {frostingLabel || "Frosting"}
               </MobileStepChip>
               <span className="opacity-30 text-xs flex-shrink-0">›</span>
-              <MobileStepChip done={!!build.topper} color="#A8C8E8" onClick={() => scrollToStep(3)}>
+              <MobileStepChip done={!!build.topperChoice} color="#A8C8E8" onClick={() => scrollToStep(3)}>
                 {topperLabel || "Topper"}
               </MobileStepChip>
             </div>
@@ -317,7 +335,7 @@ export default function WatercolorBuilder() {
                 What&apos;s the cake?
               </h2>
               <p className="font-eb-garamond italic text-lg opacity-60 mb-10" style={{ color: "#7A4A6E" }}>Every great cupcake starts here.</p>
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5">
                 {[
                   { id: "vanilla" as Flavor,   label: "Vanilla",   desc: "pale golden cake", img: "/cupcakes/base-vanilla.png" },
                   { id: "chocolate" as Flavor, label: "Chocolate", desc: "rich dark cake",    img: "/cupcakes/base-choc.png" },
@@ -328,6 +346,23 @@ export default function WatercolorBuilder() {
                     <p className="font-eb-garamond italic text-xs opacity-50 mt-1" style={{ color: "#7A4A6E" }}>{desc}</p>
                   </WcSelectionCard>
                 ))}
+                <WcSelectionCard
+                  selected={build.flavor === "half-half"}
+                  onClick={() => { set("flavor", "half-half"); setTimeout(() => scrollToStep(2), 400); }}
+                  accentColor="#F2C9A8"
+                  className="col-span-2 sm:col-span-1"
+                >
+                  <div className="flex justify-center gap-3 mb-1">
+                    <div className="relative w-14 h-14">
+                      <Image src="/cupcakes/base-vanilla.png" alt="vanilla half" fill sizes="56px" className="object-contain" />
+                    </div>
+                    <div className="relative w-14 h-14">
+                      <Image src="/cupcakes/base-choc.png" alt="chocolate half" fill sizes="56px" className="object-contain" />
+                    </div>
+                  </div>
+                  <p className="font-eb-garamond text-xl mt-2" style={{ color: "#4A2545" }}>Half & Half</p>
+                  <p className="font-eb-garamond italic text-xs opacity-50 mt-1" style={{ color: "#7A4A6E" }}>half vanilla, half choc</p>
+                </WcSelectionCard>
               </div>
             </div>
           </section>
@@ -343,7 +378,7 @@ export default function WatercolorBuilder() {
                 Paint the frosting.
               </h2>
               <p className="font-eb-garamond italic text-lg opacity-60 mb-10" style={{ color: "#7A4A6E" }}>How would you like your frosting?</p>
-              <div className="grid grid-cols-3 gap-4 mb-8">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-8">
                 {FROSTING_OPTIONS.map(({ id, label, desc, img }) => (
                   <WcSelectionCard key={id} selected={build.frosting === id} onClick={() => set("frosting", id)} accentColor="#C4AED8">
                     <div className="relative w-16 h-16 sm:w-28 sm:h-28 mx-auto"><Image src={img} alt={label} fill sizes="(max-width: 640px) 64px, 112px" className="object-contain" /></div>
@@ -359,16 +394,16 @@ export default function WatercolorBuilder() {
                   style={{ backgroundColor: "#F5F0E8", border: "1.5px solid #C4AED8" }}>
                   <span className="text-lg mt-0.5">✦</span>
                   <p className="font-eb-garamond text-sm leading-relaxed" style={{ color: "#7A4A6E" }}>
-                    Rainbow frosting is a meringue cookie sitting on classic buttercream — vanilla or chocolate to match your cake base. No colour choices needed!
+                    Rainbow frosting is a meringue cookie sitting on classic buttercream — vanilla or chocolate to match your cake base. No color choices needed!
                   </p>
                 </div>
               )}
 
-              {/* Colour note textarea for 1-color and 3-color */}
+              {/* Color note textarea for 1-color and 3-color */}
               {(build.frosting === "1-color" || build.frosting === "3-color") && (
                 <div className="rounded-3xl p-6 space-y-3 mb-6" style={{ backgroundColor: "#FAF7F2", border: "1.5px solid #E8DDD4" }}>
                   <p className="font-eb-garamond text-lg" style={{ color: "#4A2545" }}>
-                    Tell Jo your colour wishes <span className="opacity-40 text-sm">(optional)</span>
+                    Tell Jo your color wishes <span className="opacity-40 text-sm">(optional)</span>
                   </p>
                   <textarea
                     value={build.frostingColorNote}
@@ -386,82 +421,75 @@ export default function WatercolorBuilder() {
               )}
 
               {build.frosting && (
-                <button
-                  onClick={() => setTimeout(() => scrollToStep(3), 200)}
-                  className="font-eb-garamond text-sm px-6 py-2.5 rounded-full"
-                  style={{ backgroundColor: "#C4AED8", color: "#4A2545" }}>
-                  Next ↓
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                  <button
+                    onClick={scrollToSummary}
+                    className="btn-primary text-base px-8 py-3 w-full sm:w-auto justify-center"
+                  >
+                    ✦ Place my order →
+                  </button>
+                  <button
+                    onClick={() => scrollToStep(3)}
+                    className="font-eb-garamond text-base px-8 py-3 rounded-full border-2 w-full sm:w-auto text-center transition-colors"
+                    style={{ borderColor: "#C4AED8", color: "#7A4A6E" }}
+                  >
+                    + Add a topper
+                  </button>
+                </div>
               )}
             </div>
           </section>
 
           <WashDivider color="#A8C8E8" />
 
-          {/* STEP 3: TOPPER */}
+          {/* STEP 3: TOPPER (optional) */}
           <section ref={(el) => { stepRefs.current[3] = el; }} className="relative min-h-screen flex items-start px-6 py-20 lg:py-32 overflow-hidden">
             <SectionWash color="#A8C8E8" />
             <CornerSplash corner="bottom-right" color="#E8A0B0" size={200} className="absolute bottom-0 right-0" />
             <div className="relative z-10 w-full max-w-xl lg:ml-[46%]">
-              <StepPill number="03" label="The finishing touch" color="#A8C8E8" />
-              <h2 className="font-eb-garamond italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#4A2545" }}>The finishing touch.</h2>
-              <p className="font-eb-garamond italic text-lg opacity-60 mb-6" style={{ color: "#7A4A6E" }}>
-                Add a finishing touch to bring your cupcakes to life.
+              <StepPill number="03" label="Optional" color="#A8C8E8" />
+              <h2 className="font-eb-garamond italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#4A2545" }}>Add a topper.</h2>
+              <p className="font-eb-garamond italic text-lg opacity-60 mb-8" style={{ color: "#7A4A6E" }}>
+                Skip ahead if you&apos;re happy with the frosting — or pick a finishing touch.
               </p>
 
-              {/* Topper kind toggle */}
-              <div className="inline-flex rounded-full p-1 mb-2" style={{ backgroundColor: "#F0EBE3", border: "1.5px solid #E0D8CF" }}>
-                {([
-                  { val: "none"  as TopperKind, label: "No topper" },
-                  { val: "paper" as TopperKind, label: "Paper · +$0.50 each" },
-                  { val: "toy"   as TopperKind, label: "Toy · +$1.50 each" },
-                ]).map(({ val, label }) => (
-                  <button
-                    key={val}
-                    onClick={() => {
-                      setTopperKind(val);
-                      if (val === "none") set("topper", "");
-                    }}
-                    className="rounded-full px-4 py-2 font-eb-garamond text-sm transition-all duration-200"
-                    style={{
-                      backgroundColor: topperKind === val ? "#A8C8E8" : "transparent",
-                      color: topperKind === val ? "#4A2545" : "#A688A0",
-                      boxShadow: topperKind === val ? "0 2px 8px rgba(168,200,232,0.4)" : "none",
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              {/* Contextual description */}
-              <p
-                className="font-eb-garamond italic text-sm mb-7 transition-opacity duration-200"
-                style={{ color: "#7A4A6E", opacity: 0.55 }}
-              >
-                {TOPPER_KIND_DESC[topperKind]}
-              </p>
-              <div className={`grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6 transition-opacity duration-300 ${topperKind === "none" ? "opacity-30 pointer-events-none" : ""}`}>
-                {TOPPER_OPTIONS.map(({ id, label, img }) => (
-                  <WcSelectionCard key={id} selected={build.topper === id} onClick={() => set("topper", id)} accentColor="#A8C8E8">
-                    <div className="flex flex-col items-center gap-2 py-1">
-                      <div className="flex items-center justify-center w-full">
-                        {img ? (
-                          <div className="relative" style={{ width: 140, height: 140 }}>
-                            <Image src={img} alt={label} fill sizes="140px" className="object-contain" />
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center rounded-2xl" style={{ width: 140, height: 140, backgroundColor: "#F5F0E8", border: "2px dashed #C4AED8" }}>
-                            <span className="font-eb-garamond text-4xl" style={{ color: "#C4AED8" }}>?</span>
-                          </div>
-                        )}
-                      </div>
-                      <p className="font-eb-garamond text-base" style={{ color: "#4A2545" }}>{label}</p>
+              {/* Three topper type cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <WcSelectionCard selected={build.topperChoice === "paper"} onClick={() => set("topperChoice", "paper")} accentColor="#A8C8E8">
+                  <div className="py-2 flex flex-col items-center gap-2">
+                    <div className="relative w-full aspect-square" style={{ maxWidth: 120 }}>
+                      <Image src="/cupcakes/topper-fairy.png" alt="Paper topper example" fill sizes="120px" className="object-contain" />
                     </div>
-                  </WcSelectionCard>
-                ))}
+                    <p className="font-eb-garamond text-lg font-medium" style={{ color: "#4A2545" }}>Paper topper</p>
+                    <p className="font-eb-garamond italic text-xs" style={{ color: "#7A4A6E", opacity: 0.7 }}>Lightweight printed designs</p>
+                    <p className="font-eb-garamond text-sm" style={{ color: "#A8C8E8" }}>+$0.50 per cupcake</p>
+                  </div>
+                </WcSelectionCard>
+                <WcSelectionCard selected={build.topperChoice === "toy"} onClick={() => set("topperChoice", "toy")} accentColor="#A8C8E8">
+                  <div className="py-2 flex flex-col items-center gap-2">
+                    <div className="relative w-full aspect-square" style={{ maxWidth: 120 }}>
+                      <Image src="/cupcakes/topper-dinosaur.png" alt="Toy topper example" fill sizes="120px" className="object-contain" />
+                    </div>
+                    <p className="font-eb-garamond text-lg font-medium" style={{ color: "#4A2545" }}>Toy topper</p>
+                    <p className="font-eb-garamond italic text-xs" style={{ color: "#7A4A6E", opacity: 0.7 }}>Keepsake figurines</p>
+                    <p className="font-eb-garamond text-sm" style={{ color: "#A8C8E8" }}>+$1.50 per cupcake</p>
+                  </div>
+                </WcSelectionCard>
+                <WcSelectionCard selected={build.topperChoice === "custom"} onClick={() => set("topperChoice", "custom")} accentColor="#A8C8E8">
+                  <div className="py-2 flex flex-col items-center gap-2">
+                    <div className="relative w-full aspect-square" style={{ maxWidth: 120 }}>
+                      <Image src="/cupcakes/topper-unicorn.png" alt="Custom topper example" fill sizes="120px" className="object-contain" />
+                    </div>
+                    <p className="font-eb-garamond text-lg font-medium" style={{ color: "#4A2545" }}>Fully custom</p>
+                    <p className="font-eb-garamond italic text-xs" style={{ color: "#7A4A6E", opacity: 0.7 }}>You imagine it, Jo makes it</p>
+                    <p className="font-eb-garamond text-sm" style={{ color: "#A8C8E8" }}>Jo will quote you</p>
+                  </div>
+                </WcSelectionCard>
               </div>
-              {topperKind !== "none" && build.topper === "custom" && (
-                <div className="rounded-3xl p-6 space-y-5" style={{ backgroundColor: "#FAF7F2", border: "1.5px solid #E8DDD4" }}>
+
+              {/* Custom topper: description + image upload */}
+              {build.topperChoice === "custom" && (
+                <div className="rounded-3xl p-6 space-y-5 mb-6" style={{ backgroundColor: "#FAF7F2", border: "1.5px solid #E8DDD4" }}>
                   <p className="font-eb-garamond text-lg" style={{ color: "#4A2545" }}>Tell Jo what you&apos;d love ✦</p>
                   <label className="block space-y-2">
                     <span className="font-eb-garamond text-sm opacity-60" style={{ color: "#7A4A6E" }}>Describe your topper</span>
@@ -504,12 +532,20 @@ export default function WatercolorBuilder() {
                   </label>
                 </div>
               )}
+
+              <button
+                onClick={scrollToSummary}
+                className="font-eb-garamond text-sm px-6 py-2.5 rounded-full transition-colors"
+                style={{ backgroundColor: build.topperChoice ? "#A8C8E8" : "#F0EBE4", color: "#4A2545" }}
+              >
+                {build.topperChoice ? "Continue →" : "Skip — no topper →"}
+              </button>
             </div>
           </section>
       </div>
 
       {/* SUMMARY */}
-      <section className="relative px-6 py-24 overflow-hidden" style={{ backgroundColor: "#F5F0E8", zIndex: 30 }}>
+      <section ref={(el) => { summaryRef.current = el; }} className="relative px-6 py-24 overflow-hidden" style={{ backgroundColor: "#F5F0E8", zIndex: 30 }}>
         <SectionWash color="#E8A0B0" />
         <CornerSplash corner="top-left" color="#C4AED8" size={200} className="absolute top-0 left-0" />
         <CornerSplash corner="bottom-right" color="#F0D898" size={180} className="absolute bottom-0 right-0" />
@@ -519,26 +555,31 @@ export default function WatercolorBuilder() {
             <h2 className="font-eb-garamond italic font-medium" style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)", color: "#4A2545" }}>Your cupcake order</h2>
           </div>
           <div className="rounded-3xl p-8 mb-8" style={{ backgroundColor: "#FAF7F2", boxShadow: "0 8px 48px rgba(107,92,82,0.10)", border: "1.5px solid #E8DDD4" }}>
-            <div className="space-y-3 mb-8">
-              {[
-                { label: "Base",     value: build.flavor || "—",            color: "#F2C9A8", done: !!build.flavor,   step: 1 },
-                { label: "Frosting", value: frostingLabel || "—",           color: "#C4AED8", done: !!build.frosting, step: 2 },
-                { label: "Topper",   value: topperKind === "none" ? "No topper" : (build.topper ? topperLabel : "—"), color: "#A8C8E8", done: topperKind === "none" || !!build.topper, step: 3 },
-              ].map(({ label, value, color, done, step }) => (
-                <div key={label} className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: done ? color : "#E8DDD4" }} />
-                  <span className="font-eb-garamond text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#7A4A6E" }}>{label}</span>
-                  <span className="font-eb-garamond italic capitalize text-sm flex-1" style={{ color: done ? "#4A2545" : "#C0B8B0" }}>{value}</span>
-                  {!done && <button onClick={() => scrollToStep(step)} className="font-eb-garamond text-xs underline opacity-40 hover:opacity-70" style={{ color: "#7A4A6E" }}>choose ↑</button>}
-                </div>
-              ))}
-              {build.frostingColorNote && (
-                <div className="flex items-start gap-3 pt-1">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ backgroundColor: "#C4AED8" }} />
-                  <span className="font-eb-garamond text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#7A4A6E" }}>Colours</span>
-                  <span className="font-eb-garamond italic text-sm flex-1" style={{ color: "#4A2545" }}>{build.frostingColorNote}</span>
-                </div>
-              )}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-8 mb-8">
+              <div className="flex-shrink-0">
+                <LivePreview build={build} />
+              </div>
+              <div className="space-y-3">
+                {[
+                  { label: "Base",     value: (build.flavor && FLAVOR_DISPLAY[build.flavor]) || "—", color: "#F2C9A8", done: !!build.flavor, step: 1 },
+                  { label: "Frosting", value: frostingLabel || "—",           color: "#C4AED8", done: !!build.frosting, step: 2 },
+                  { label: "Topper",   value: topperLabel || "None", color: "#A8C8E8", done: true, step: 3 },
+                ].map(({ label, value, color, done, step }) => (
+                  <div key={label} className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: done ? color : "#E8DDD4" }} />
+                    <span className="font-eb-garamond text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#7A4A6E" }}>{label}</span>
+                    <span className="font-eb-garamond italic capitalize text-sm flex-1" style={{ color: done ? "#4A2545" : "#C0B8B0" }}>{value}</span>
+                    {!done && <button onClick={() => scrollToStep(step)} className="font-eb-garamond text-xs underline opacity-40 hover:opacity-70" style={{ color: "#7A4A6E" }}>choose ↑</button>}
+                  </div>
+                ))}
+                {build.frostingColorNote && (
+                  <div className="flex items-start gap-3 pt-1">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ backgroundColor: "#C4AED8" }} />
+                    <span className="font-eb-garamond text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#7A4A6E" }}>Colors</span>
+                    <span className="font-eb-garamond italic text-sm flex-1" style={{ color: "#4A2545" }}>{build.frostingColorNote}</span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="border-t pt-6" style={{ borderColor: "#E8DDD4" }}>
               <p className="font-eb-garamond text-sm opacity-60 mb-4" style={{ color: "#7A4A6E" }}>How many cupcakes?</p>
@@ -558,10 +599,16 @@ export default function WatercolorBuilder() {
                 <span className="font-eb-garamond italic opacity-60" style={{ color: "#7A4A6E" }}>{build.quantity} cupcakes</span>
                 <span className="font-eb-garamond italic text-lg" style={{ color: "#4A2545" }}>${basePrice}</span>
               </div>
-              {topperKind !== "none" && (
+              {(build.topperChoice === "paper" || build.topperChoice === "toy") && (
                 <div className="flex justify-between">
-                  <span className="font-eb-garamond italic opacity-60" style={{ color: "#7A4A6E" }}>{TOPPER_KIND_LABEL[topperKind]}</span>
+                  <span className="font-eb-garamond italic opacity-60" style={{ color: "#7A4A6E" }}>{topperLabel}</span>
                   <span className="font-eb-garamond italic text-lg" style={{ color: "#4A2545" }}>+${topperAddon.toFixed(2).replace(".00", "")}</span>
+                </div>
+              )}
+              {build.topperChoice === "custom" && (
+                <div className="flex justify-between">
+                  <span className="font-eb-garamond italic opacity-60" style={{ color: "#7A4A6E" }}>Custom topper</span>
+                  <span className="font-eb-garamond italic text-sm" style={{ color: "#A8C8E8" }}>+ Jo will quote</span>
                 </div>
               )}
               <div className="flex justify-between border-t pt-3" style={{ borderColor: "#E8DDD4" }}>
@@ -579,7 +626,6 @@ export default function WatercolorBuilder() {
                   {[
                     { label: "Base",     done: !!build.flavor,   step: 1 },
                     { label: "Frosting", done: !!build.frosting, step: 2 },
-                    { label: "Topper",   done: topperKind === "none" || !!build.topper, step: 3 },
                   ].map(({ label, done, step }) => (
                     <button key={label} onClick={() => scrollToStep(step)}
                       className="rounded-full px-4 py-1.5 font-eb-garamond text-sm transition-all"
@@ -606,48 +652,152 @@ export default function WatercolorBuilder() {
   );
 }
 
-function LivePreview({ build }: { build: BuildState }) {
-  const frostingImg = build.frosting ? FROSTING_OPTIONS.find((f) => f.id === build.frosting)?.img : null;
-  const baseImg = build.flavor === "chocolate" ? "/cupcakes/base-choc.png" : build.flavor === "vanilla" ? "/cupcakes/base-vanilla.png" : null;
-  const topperImg = build.topper && build.topper !== "custom" ? TOPPER_OPTIONS.find((t) => t.id === build.topper)?.img : null;
-  const previewLayerClass = "absolute inset-x-0 bottom-0 h-44";
+function LivePreview({ build, width = 140 }: { build: BuildState; width?: number }) {
+  const [layerUrls, setLayerUrls] = useState<Record<string, string>>({});
 
-  if (!baseImg) {
+  const frostFile =
+    build.frosting === "1-color" ? "swirl-single.png" :
+    build.frosting === "3-color" ? "swirl-triple.png" :
+    build.frosting === "rainbow" ? "swirl-rainbow.png" :
+    null;
+
+  const topFile =
+    build.topperChoice === "paper"  ? "topper-fairy.png" :
+    build.topperChoice === "toy"    ? "topper-dinosaur.png" :
+    build.topperChoice === "custom" ? "topper-unicorn.png" :
+    null;
+
+  useEffect(() => {
+    const srcs: [string, string][] = [];
+    if (build.flavor === "vanilla"   || build.flavor === "half-half") srcs.push(["base-vanilla.png", "/cupcakes/base-vanilla.png"]);
+    if (build.flavor === "chocolate" || build.flavor === "half-half") srcs.push(["base-choc.png",    "/cupcakes/base-choc.png"]);
+    const ff =
+      build.frosting === "1-color" ? "swirl-single.png" :
+      build.frosting === "3-color" ? "swirl-triple.png" :
+      build.frosting === "rainbow" ? "swirl-rainbow.png" : null;
+    if (ff) srcs.push([ff, `/cupcakes/${ff}`]);
+    const tf =
+      build.topperChoice === "paper"  ? "topper-fairy.png" :
+      build.topperChoice === "toy"    ? "topper-dinosaur.png" :
+      build.topperChoice === "custom" ? "topper-unicorn.png" : null;
+    if (tf) srcs.push([tf, `/cupcakes/${tf}`]);
+
+    const needed = new Set(srcs.map(([f]) => f));
+    setLayerUrls(prev => {
+      const next = { ...prev };
+      Object.keys(next).forEach(k => { if (!needed.has(k)) delete next[k]; });
+      return next;
+    });
+
+    let alive = true;
+    srcs.forEach(([file, src]) => {
+      stripBlackBg(src).then(url => {
+        if (alive) setLayerUrls(prev => ({ ...prev, [file]: url }));
+      }).catch(() => {});
+    });
+    return () => { alive = false; };
+  }, [build.flavor, build.frosting, build.topperChoice]);
+
+  // ── Empty state ──────────────────────────────────────────────────────
+  if (!build.flavor) {
     return (
-      <div className="w-56 h-44 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#F5F0E8" }}>
+      <div
+        className="rounded-2xl flex items-center justify-center"
+        style={{ width, height: Math.round(width * 0.8), backgroundColor: "#F5F0E8" }}
+      >
         <span className="font-eb-garamond text-sm opacity-40" style={{ color: "#7A4A6E" }}>choose a base ↓</span>
       </div>
     );
   }
 
+  // ── Anchor-based positioning ─────────────────────────────────────────
+  const ASPECT = 1100 / 1875;
+  const H = width / ASPECT;
+
+  const baseAnchorFile = build.flavor === "chocolate" ? "base-choc.png" : "base-vanilla.png";
+  const baseA  = CUPCAKE_ANCHORS[baseAnchorFile];
+  const frostA = frostFile ? CUPCAKE_ANCHORS[frostFile] : null;
+  const topA   = topFile   ? CUPCAKE_ANCHORS[topFile]   : null;
+
+  // Compute positions with baseTop = 0 as reference, growing downward
+  const baseVisibleTop = H * baseA.top;
+
+  const SEAM = H * 0.033; // overlap to hide watercolor feathered edges at layer boundaries
+
+  let frostTop_r: number | null = null;
+  let frostVisibleTop: number | null = null;
+  if (frostA) {
+    frostTop_r    = baseVisibleTop - H * frostA.bottom + SEAM;
+    frostVisibleTop = frostTop_r + H * frostA.top;
+  }
+
+  let topTop_r: number | null = null;
+  if (topA) {
+    const apex = frostVisibleTop ?? baseVisibleTop;
+    topTop_r = apex - H * topA.bottom + SEAM;
+  }
+
+  // Shift everything so the topmost layer starts at y = 0
+  const minY  = Math.min(0, frostTop_r ?? 0, topTop_r ?? 0);
+  const shift = minY < 0 ? -minY : 0;
+
+  const baseTopFinal  = shift;
+  const frostTopFinal = frostTop_r !== null ? frostTop_r + shift : null;
+  const topTopFinal   = topTop_r   !== null ? topTop_r   + shift : null;
+  const containerH    = baseTopFinal + H * baseA.bottom;
+
+  const layer = (top: number): CSSProperties => ({
+    position: "absolute", top, left: 0, width, height: H, userSelect: "none",
+  });
+
+  const isHalfHalf = build.flavor === "half-half";
+
+  // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div className="relative w-56 h-44 mx-auto -mt-1">
-      <div className={previewLayerClass}>
-        <Image src={baseImg} alt="cake base" fill sizes="224px" className="object-contain object-bottom" />
-      </div>
-      {frostingImg && (
-        <div className={previewLayerClass}>
-          <Image src={frostingImg} alt="frosting" fill sizes="224px" className="object-contain object-bottom" />
-        </div>
+    <div style={{ position: "relative", width, height: containerH, flexShrink: 0 }}>
+
+      {/* Base */}
+      {isHalfHalf ? (
+        layerUrls["base-vanilla.png"] && layerUrls["base-choc.png"] && (
+          <div style={{ position: "absolute", top: baseTopFinal, width, height: H, display: "flex", overflow: "hidden" }}>
+            <div style={{ width: width / 2, height: H, overflow: "hidden", position: "relative", flexShrink: 0 }}>
+              <img src={layerUrls["base-vanilla.png"]} alt="vanilla half"
+                style={{ position: "absolute", top: 0, left: 0, width, height: H, userSelect: "none" }} draggable={false} />
+            </div>
+            <div style={{ width: width / 2, height: H, overflow: "hidden", position: "relative", flexShrink: 0 }}>
+              <img src={layerUrls["base-choc.png"]} alt="chocolate half"
+                style={{ position: "absolute", top: 0, left: -(width / 2), width, height: H, userSelect: "none" }} draggable={false} />
+            </div>
+          </div>
+        )
+      ) : (
+        layerUrls[baseAnchorFile] && (
+          <img src={layerUrls[baseAnchorFile]}
+            alt={build.flavor === "chocolate" ? "chocolate base" : "vanilla base"}
+            style={layer(baseTopFinal)} draggable={false} />
+        )
       )}
-      {topperImg && (
-        <div className={previewLayerClass}>
-          <Image src={topperImg} alt="topper" fill sizes="224px" className="object-contain object-bottom" />
-        </div>
+
+      {/* Frosting */}
+      {frostFile && frostTopFinal !== null && layerUrls[frostFile] && (
+        <img src={layerUrls[frostFile]} alt="frosting"
+          style={layer(frostTopFinal)} draggable={false} />
       )}
-      {build.topper === "custom" && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 text-2xl">✏️</div>
+
+      {/* Topper */}
+      {topFile && topTopFinal !== null && layerUrls[topFile] && (
+        <img src={layerUrls[topFile]} alt="topper"
+          style={layer(topTopFinal)} draggable={false} />
       )}
     </div>
   );
 }
 
 function MiniPreview({ build }: { build: BuildState }) {
+  const isHalfHalf = build.flavor === "half-half";
   const baseImg = build.flavor === "chocolate" ? "/cupcakes/base-choc.png" : build.flavor === "vanilla" ? "/cupcakes/base-vanilla.png" : null;
   const frostingImg = build.frosting ? FROSTING_OPTIONS.find((f) => f.id === build.frosting)?.img : null;
-  const topperImg = build.topper && build.topper !== "custom" ? TOPPER_OPTIONS.find((t) => t.id === build.topper)?.img : null;
-
-  if (!baseImg) {
+  if (!baseImg && !isHalfHalf) {
     return (
       <div className="w-full h-full rounded-xl flex items-center justify-center" style={{ backgroundColor: "#F5F0E8" }}>
         <span className="text-lg opacity-30">🧁</span>
@@ -657,24 +807,29 @@ function MiniPreview({ build }: { build: BuildState }) {
 
   return (
     <div className="relative w-full h-full">
-      {/* Base — anchored to bottom */}
-      <div className="absolute bottom-2 inset-x-0 h-14">
-        <Image src={baseImg} alt="base" fill sizes="72px" className="object-contain object-bottom" />
-      </div>
-      {/* Frosting — sits on top of base */}
+      {isHalfHalf ? (
+        <div className="absolute bottom-2 inset-x-0 h-14 flex overflow-hidden">
+          <div className="relative flex-1 h-full">
+            <Image src="/cupcakes/base-vanilla.png" alt="vanilla half" fill sizes="36px" className="object-contain object-bottom" />
+          </div>
+          <div className="relative flex-1 h-full">
+            <Image src="/cupcakes/base-choc.png" alt="chocolate half" fill sizes="36px" className="object-contain object-bottom" />
+          </div>
+        </div>
+      ) : (
+        <div className="absolute bottom-2 inset-x-0 h-14">
+          <Image src={baseImg!} alt="base" fill sizes="72px" className="object-contain object-bottom" />
+        </div>
+      )}
       {frostingImg && (
         <div className="absolute bottom-4 inset-x-0 h-14">
           <Image src={frostingImg} alt="frosting" fill sizes="72px" className="object-contain object-bottom" />
         </div>
       )}
-      {/* Topper — sits on top of frosting tip */}
-      {topperImg && (
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-10 h-10">
-          <Image src={topperImg} alt="topper" fill sizes="40px" className="object-contain object-bottom" />
+      {build.topperChoice && (
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-12">
+          <Image src={TOPPER_IMAGES[build.topperChoice]} alt="topper" fill sizes="40px" className="object-contain object-top" />
         </div>
-      )}
-      {build.topper === "custom" && (
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 font-eb-garamond text-lg leading-none font-bold" style={{ color: "#C4AED8" }}>?</div>
       )}
     </div>
   );

@@ -13,7 +13,7 @@ const config: Config = {
         "tp-primary":   "#4A2545",
         "tp-secondary":  "#7A4A6E",
         "tp-muted":      "#7D5A7A",
-        // Brand colours (kept for admin / utility use)
+        // Brand colors (kept for admin / utility use)
         berry: "#6B2547",
         plum: "#4A3050",
         rose: "#B5588C",
