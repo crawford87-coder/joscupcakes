@@ -340,9 +340,13 @@ export default function WatercolorBuilder() {
                   { id: "chocolate" as Flavor, label: "Chocolate", desc: "rich dark cake",    img: "/cupcakes/base-choc.png" },
                 ].map(({ id, label, desc, img }) => (
                   <WcSelectionCard key={id} selected={build.flavor === id} onClick={() => { set("flavor", id); setTimeout(() => scrollToStep(2), 400); }} accentColor="#F2C9A8">
-                    <div className="relative w-32 h-32 mx-auto"><Image src={img} alt={`${label} cupcake base`} fill sizes="128px" className="object-contain" /></div>
-                    <p className="font-eb-garamond text-xl mt-2" style={{ color: "#4A2545" }}>{label}</p>
-                    <p className="font-eb-garamond italic text-xs opacity-50 mt-1" style={{ color: "#7A4A6E" }}>{desc}</p>
+                    <div className="flex flex-col items-center w-full">
+                      <div className="relative w-32 h-32 flex-shrink-0">
+                        <Image src={img} alt={`${label} cupcake base`} fill sizes="128px" className="object-contain" />
+                      </div>
+                      <p className="font-eb-garamond text-xl mt-2 h-8 flex items-center justify-center" style={{ color: "#4A2545" }}>{label}</p>
+                      <p className="font-eb-garamond italic text-xs opacity-50 mt-1 min-h-[2.5rem]" style={{ color: "#7A4A6E" }}>{desc}</p>
+                    </div>
                   </WcSelectionCard>
                 ))}
                 <WcSelectionCard
@@ -351,16 +355,13 @@ export default function WatercolorBuilder() {
                   accentColor="#F2C9A8"
                   className="col-span-2 sm:col-span-1"
                 >
-                  <div className="flex justify-center gap-3 mb-1">
-                    <div className="relative w-14 h-14">
-                      <Image src="/cupcakes/base-vanilla.png" alt="vanilla half" fill sizes="56px" className="object-contain" />
+                  <div className="flex flex-col items-center w-full">
+                    <div className="relative w-32 h-32 flex-shrink-0">
+                      <Image src="/cupcakes/base-halfhalf.png" alt="Half and half cupcake base" fill sizes="128px" className="object-contain" />
                     </div>
-                    <div className="relative w-14 h-14">
-                      <Image src="/cupcakes/base-choc.png" alt="chocolate half" fill sizes="56px" className="object-contain" />
-                    </div>
+                    <p className="font-eb-garamond text-xl mt-2 h-8 flex items-center justify-center" style={{ color: "#4A2545" }}>Half & Half</p>
+                    <p className="font-eb-garamond italic text-xs opacity-50 mt-1 min-h-[2.5rem]" style={{ color: "#7A4A6E" }}>half the batch vanilla, half chocolate</p>
                   </div>
-                  <p className="font-eb-garamond text-xl mt-2" style={{ color: "#4A2545" }}>Half & Half</p>
-                  <p className="font-eb-garamond italic text-xs opacity-50 mt-1" style={{ color: "#7A4A6E" }}>half vanilla, half choc</p>
                 </WcSelectionCard>
               </div>
             </div>
@@ -454,36 +455,23 @@ export default function WatercolorBuilder() {
 
               {/* Three topper type cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <WcSelectionCard selected={build.topperChoice === "paper"} onClick={() => set("topperChoice", "paper")} accentColor="#A8C8E8">
-                  <div className="py-2 flex flex-col items-center gap-2">
-                    <div className="relative w-full aspect-square" style={{ maxWidth: 120 }}>
-                      <Image src="/cupcakes/topper-fairy.png" alt="Paper topper example" fill sizes="120px" className="object-contain" />
+                {([
+                  { id: "paper",  img: "/cupcakes/topper-fairy.png",    alt: "Paper topper example",  title: "Paper topper",  desc: "Lightweight printed designs", price: "+$0.50 per cupcake" },
+                  { id: "toy",    img: "/cupcakes/topper-dinosaur.png", alt: "Toy topper example",    title: "Toy topper",    desc: "Keepsake figurines",          price: "+$1.50 per cupcake" },
+                  { id: "custom", img: "/cupcakes/topper-unicorn.png",  alt: "Custom topper example", title: "Fully custom",  desc: "You imagine it, Jo makes it", price: "Jo will quote you"  },
+                ] as const).map(({ id, img, alt, title, desc, price }) => (
+                  <WcSelectionCard key={id} selected={build.topperChoice === id} onClick={() => set("topperChoice", id)} accentColor="#A8C8E8" className="flex flex-col">
+                    {/* Image area: flex-1 fills remaining space, centers the cropped artwork */}
+                    <div className="flex-1 flex items-center justify-center w-full py-3">
+                      <div className="relative overflow-hidden" style={{ width: "78%", aspectRatio: "1100 / 938" }}>
+                        <Image src={img} alt={alt} fill sizes="200px" className="object-cover object-top" />
+                      </div>
                     </div>
-                    <p className="font-eb-garamond text-lg font-medium" style={{ color: "#4A2545" }}>Paper topper</p>
-                    <p className="font-eb-garamond italic text-xs" style={{ color: "#7A4A6E", opacity: 0.7 }}>Lightweight printed designs</p>
-                    <p className="font-eb-garamond text-sm" style={{ color: "#A8C8E8" }}>+$0.50 per cupcake</p>
-                  </div>
-                </WcSelectionCard>
-                <WcSelectionCard selected={build.topperChoice === "toy"} onClick={() => set("topperChoice", "toy")} accentColor="#A8C8E8">
-                  <div className="py-2 flex flex-col items-center gap-2">
-                    <div className="relative w-full aspect-square" style={{ maxWidth: 120 }}>
-                      <Image src="/cupcakes/topper-dinosaur.png" alt="Toy topper example" fill sizes="120px" className="object-contain" />
-                    </div>
-                    <p className="font-eb-garamond text-lg font-medium" style={{ color: "#4A2545" }}>Toy topper</p>
-                    <p className="font-eb-garamond italic text-xs" style={{ color: "#7A4A6E", opacity: 0.7 }}>Keepsake figurines</p>
-                    <p className="font-eb-garamond text-sm" style={{ color: "#A8C8E8" }}>+$1.50 per cupcake</p>
-                  </div>
-                </WcSelectionCard>
-                <WcSelectionCard selected={build.topperChoice === "custom"} onClick={() => set("topperChoice", "custom")} accentColor="#A8C8E8">
-                  <div className="py-2 flex flex-col items-center gap-2">
-                    <div className="relative w-full aspect-square" style={{ maxWidth: 120 }}>
-                      <Image src="/cupcakes/topper-unicorn.png" alt="Custom topper example" fill sizes="120px" className="object-contain" />
-                    </div>
-                    <p className="font-eb-garamond text-lg font-medium" style={{ color: "#4A2545" }}>Fully custom</p>
-                    <p className="font-eb-garamond italic text-xs" style={{ color: "#7A4A6E", opacity: 0.7 }}>You imagine it, Jo makes it</p>
-                    <p className="font-eb-garamond text-sm" style={{ color: "#A8C8E8" }}>Jo will quote you</p>
-                  </div>
-                </WcSelectionCard>
+                    <p className="font-eb-garamond text-lg font-medium h-7 flex items-center justify-center" style={{ color: "#4A2545" }}>{title}</p>
+                    <p className="font-eb-garamond italic text-xs mt-1 min-h-[2rem]" style={{ color: "#7A4A6E", opacity: 0.7 }}>{desc}</p>
+                    <p className="font-eb-garamond text-sm mt-1" style={{ color: "#A8C8E8" }}>{price}</p>
+                  </WcSelectionCard>
+                ))}
               </div>
 
               {/* Custom topper: description + image upload */}
@@ -668,8 +656,9 @@ function LivePreview({ build, width = 140 }: { build: BuildState; width?: number
 
   useEffect(() => {
     const srcs: [string, string][] = [];
-    if (build.flavor === "vanilla"   || build.flavor === "half-half") srcs.push(["base-vanilla.png", "/cupcakes/base-vanilla.png"]);
-    if (build.flavor === "chocolate" || build.flavor === "half-half") srcs.push(["base-choc.png",    "/cupcakes/base-choc.png"]);
+    if (build.flavor === "vanilla")   srcs.push(["base-vanilla.png",   "/cupcakes/base-vanilla.png"]);
+    if (build.flavor === "chocolate") srcs.push(["base-choc.png",       "/cupcakes/base-choc.png"]);
+    if (build.flavor === "half-half") srcs.push(["base-halfhalf.png",   "/cupcakes/base-halfhalf.png"]);
     const ff =
       build.frosting === "1-color" ? "swirl-single.png" :
       build.frosting === "3-color" ? "swirl-triple.png" :
@@ -711,32 +700,17 @@ function LivePreview({ build, width = 140 }: { build: BuildState; width?: number
 
   const H = Math.round(width * (1875 / 1100) * 100) / 100;
   const layer: CSSProperties = { position: "absolute", bottom: 0, left: 0, width, height: H, userSelect: "none" };
-  const isHalfHalf = build.flavor === "half-half";
-  const baseFile = build.flavor === "chocolate" ? "base-choc.png" : "base-vanilla.png";
+  const baseFile =
+    build.flavor === "chocolate" ? "base-choc.png" :
+    build.flavor === "half-half" ? "base-halfhalf.png" :
+    "base-vanilla.png";
 
   return (
     <div style={{ position: "relative", width, height: H, flexShrink: 0 }}>
 
       {/* Base */}
-      {isHalfHalf ? (
-        layerUrls["base-vanilla.png"] && layerUrls["base-choc.png"] && (
-          <div style={{ position: "absolute", bottom: 0, left: 0, width, height: H, display: "flex", overflow: "hidden" }}>
-            <div style={{ width: width / 2, height: H, overflow: "hidden", position: "relative", flexShrink: 0 }}>
-              <img src={layerUrls["base-vanilla.png"]} alt="vanilla half"
-                style={{ position: "absolute", bottom: 0, left: 0, width, height: H, userSelect: "none" }} draggable={false} />
-            </div>
-            <div style={{ width: width / 2, height: H, overflow: "hidden", position: "relative", flexShrink: 0 }}>
-              <img src={layerUrls["base-choc.png"]} alt="chocolate half"
-                style={{ position: "absolute", bottom: 0, left: -(width / 2), width, height: H, userSelect: "none" }} draggable={false} />
-            </div>
-          </div>
-        )
-      ) : (
-        layerUrls[baseFile] && (
-          <img src={layerUrls[baseFile]}
-            alt={build.flavor === "chocolate" ? "chocolate base" : "vanilla base"}
-            style={layer} draggable={false} />
-        )
+      {layerUrls[baseFile] && (
+        <img src={layerUrls[baseFile]} alt="cupcake base" style={layer} draggable={false} />
       )}
 
       {/* Frosting */}
@@ -753,10 +727,13 @@ function LivePreview({ build, width = 140 }: { build: BuildState; width?: number
 }
 
 function MiniPreview({ build }: { build: BuildState }) {
-  const isHalfHalf = build.flavor === "half-half";
-  const baseImg = build.flavor === "chocolate" ? "/cupcakes/base-choc.png" : build.flavor === "vanilla" ? "/cupcakes/base-vanilla.png" : null;
+  const baseImg =
+    build.flavor === "chocolate" ? "/cupcakes/base-choc.png" :
+    build.flavor === "half-half" ? "/cupcakes/base-halfhalf.png" :
+    build.flavor === "vanilla"   ? "/cupcakes/base-vanilla.png" :
+    null;
   const frostingImg = build.frosting ? FROSTING_OPTIONS.find((f) => f.id === build.frosting)?.img : null;
-  if (!baseImg && !isHalfHalf) {
+  if (!baseImg) {
     return (
       <div className="w-40 h-48 mx-auto rounded-xl flex items-center justify-center" style={{ backgroundColor: "#F5F0E8" }}>
         <span className="text-lg opacity-30">🧁</span>
@@ -766,20 +743,9 @@ function MiniPreview({ build }: { build: BuildState }) {
 
   return (
     <div className="relative w-40 h-48 mx-auto">
-      {isHalfHalf ? (
-        <div className="absolute inset-x-2 bottom-0 h-28 flex overflow-hidden">
-          <div className="relative flex-1 h-full">
-            <Image src="/cupcakes/base-vanilla.png" alt="vanilla half" fill sizes="80px" className="object-contain object-bottom" />
-          </div>
-          <div className="relative flex-1 h-full">
-            <Image src="/cupcakes/base-choc.png" alt="chocolate half" fill sizes="80px" className="object-contain object-bottom" />
-          </div>
-        </div>
-      ) : (
-        <div className="absolute inset-x-2 bottom-0 h-28">
-          <Image src={baseImg!} alt="base" fill sizes="160px" className="object-contain object-bottom" />
-        </div>
-      )}
+      <div className="absolute inset-x-2 bottom-0 h-28">
+        <Image src={baseImg} alt="cupcake base" fill sizes="160px" className="object-contain object-bottom" />
+      </div>
       {frostingImg && (
         <div className="absolute inset-x-2 bottom-0 h-28">
           <Image src={frostingImg} alt="frosting" fill sizes="160px" className="object-contain object-bottom" />
