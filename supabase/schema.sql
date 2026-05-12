@@ -162,3 +162,36 @@ create policy "Public can read gallery images"
   on storage.objects for select
   to public
   using (bucket_id = 'gallery');
+
+-- ============================================================
+-- Phase 3: Gmail threading
+-- Run these in the Supabase SQL editor
+-- ============================================================
+
+-- Add Gmail thread ID to orders
+alter table orders add column if not exists gmail_thread_id text;
+alter table orders add column if not exists delivery_photo_url text;
+
+-- Add quoting to status constraint (run if orders table already exists)
+-- alter table orders drop constraint orders_status_check;
+-- alter table orders add constraint orders_status_check check (
+--   status in ('new','quoting','awaiting_payment','confirmed','in_progress','ready','delivered','cancelled')
+-- );
+
+-- Gmail credentials (single row — Jo's account)
+create table if not exists gmail_credentials (
+  id int primary key default 1,
+  email text,
+  refresh_token text,
+  access_token text,
+  token_expiry timestamptz,
+  updated_at timestamptz default now()
+);
+
+alter table gmail_credentials enable row level security;
+
+create policy "Admin can manage gmail credentials"
+  on gmail_credentials for all
+  to authenticated
+  using (true)
+  with check (true);
