@@ -1,32 +1,69 @@
 // Pricing constants used by both the form and the API route
 
-export const PRICES: Record<number, number> = {
+export const PRICES_NO_TOPPER: Record<number, number> = {
   6: 24,
-  12: 42,
-  18: 60,
-  24: 76,
-  36: 108,
-  48: 140,
+  12: 46,
+  18: 68,
+  24: 88,
+  36: 126,
+  48: 168,
 };
 
-export const ADDON_TOPPER = 8;
-export const ADDON_EXTRAS = 3; // sprinkles or glitter
+export const PRICES_WITH_TOPPER: Record<number, number> = {
+  6: 30,
+  12: 58,
+  18: 86,
+  24: 112,
+  36: 162,
+  48: 216,
+};
+
+// Legacy alias (used by order form / API — maps to no-topper base)
+export const PRICES = PRICES_NO_TOPPER;
+
 export const ADDON_DELIVERY = 10;
+
+/** Display price for the topper add-on (minimum order of 6 cupcakes) */
+export const ADDON_TOPPER = 6;
+
+/** Display price for sprinkles/glitter extras — currently complimentary */
+export const ADDON_EXTRAS = 0;
+
+/** Icing colour palette available in the order form */
+export const ICING_COLOR_OPTIONS: { id: string; label: string; hex: string }[] = [
+  { id: "white",       label: "White",       hex: "#FFFFFF" },
+  { id: "blush-pink",  label: "Blush Pink",  hex: "#F9C0CB" },
+  { id: "rose",        label: "Rose",        hex: "#E8758A" },
+  { id: "red",         label: "Red",         hex: "#E63946" },
+  { id: "coral",       label: "Coral",       hex: "#FF8070" },
+  { id: "peach",       label: "Peach",       hex: "#FFBE9F" },
+  { id: "orange",      label: "Orange",      hex: "#F4A261" },
+  { id: "yellow",      label: "Yellow",      hex: "#FFD166" },
+  { id: "mint",        label: "Mint",        hex: "#A8E6CF" },
+  { id: "sage",        label: "Sage",        hex: "#8FB69C" },
+  { id: "green",       label: "Green",       hex: "#57CC99" },
+  { id: "sky-blue",    label: "Sky Blue",    hex: "#90CBF9" },
+  { id: "blue",        label: "Blue",        hex: "#4895EF" },
+  { id: "lavender",    label: "Lavender",    hex: "#C4AED8" },
+  { id: "purple",      label: "Purple",      hex: "#8338EC" },
+  { id: "lilac",       label: "Lilac",       hex: "#D5A6E6" },
+  { id: "chocolate",   label: "Chocolate",   hex: "#8B4513" },
+  { id: "gold",        label: "Gold",        hex: "#D4AF37" },
+  { id: "black",       label: "Black",       hex: "#2D2D2D" },
+];
 
 export function calculateTotal({
   quantity,
   topper,
-  hasExtras,
   delivery,
 }: {
   quantity: number;
   topper: boolean;
-  hasExtras: boolean;
   delivery: boolean;
+  hasExtras?: boolean;
 }): number {
-  let total = PRICES[quantity] ?? 0;
-  if (topper) total += ADDON_TOPPER;
-  if (hasExtras) total += ADDON_EXTRAS;
+  const table = topper ? PRICES_WITH_TOPPER : PRICES_NO_TOPPER;
+  let total = table[quantity] ?? 0;
   if (delivery) total += ADDON_DELIVERY;
   return total;
 }
@@ -64,15 +101,4 @@ export function generateReferenceNumber(): string {
   return `JC-${year}-${rand}`;
 }
 
-export const ICING_COLOR_OPTIONS = [
-  { id: "white", label: "White", hex: "#FFFFFF" },
-  { id: "pink", label: "Pink", hex: "#F4C0D1" },
-  { id: "lavender", label: "Lavender", hex: "#C5B8E8" },
-  { id: "mint", label: "Mint", hex: "#B5D9C7" },
-  { id: "butter", label: "Butter", hex: "#FAC775" },
-  { id: "blue", label: "Baby Blue", hex: "#A8D0E6" },
-  { id: "peach", label: "Peach", hex: "#F9C6A0" },
-  { id: "red", label: "Red", hex: "#E57373" },
-  { id: "teal", label: "Teal", hex: "#80CBC4" },
-  { id: "purple", label: "Purple", hex: "#9575CD" },
-];
+
