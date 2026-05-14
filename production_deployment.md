@@ -114,7 +114,9 @@ cd /srv/apps/joscupcakes
 git pull
 npm install
 npm run build
-pm2 restart joscupcakes --update-env
+pm2 delete joscupcakes
+pm2 start npm --name "joscupcakes" -- start
+pm2 save
 ```
 
 ## 6. nginx Reverse Proxy
@@ -277,7 +279,9 @@ Expected result:
 - Do not commit `.env` with real secrets.
 - Do not use `npm run dev` in production.
 - Do not hardcode the production port in the codebase.
-- For restarts after env changes, use `pm2 restart joscupcakes --update-env`.
+- For env changes, prefer a clean PM2 restart (`delete` + `start`) instead of `restart --update-env` to avoid stale process state.
+- Next.js env-file precedence in production is: `.env.production.local` -> `.env.local` -> `.env.production` -> `.env`.
+- If redirects are wrong, verify `SITE_URL` is not overridden in a higher-priority env file.
 
 ## 11. Recommended First Deploy Flow
 
