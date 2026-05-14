@@ -6,9 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   PRICES,
-  ADDON_TOPPER,
   ADDON_DELIVERY,
-  ADDON_EXTRAS,
   calculateTotal,
   isAustinISDZip,
   isPickupDateValid,
@@ -20,28 +18,15 @@ import {
 const FLAVOR_LABELS: Record<string, string> = {
   vanilla: "Vanilla",
   chocolate: "Chocolate",
+  "half-half": "Half & Half",
 };
 
 const FROSTING_LABELS: Record<string, string> = {
-  "3": "3-colour frosting",
-  "4": "4-colour frosting",
-  "5": "5-colour frosting",
+  "1-color": "Single swirl",
+  "3-color": "Triple swirl",
+  "rainbow": "Rainbow meringue",
 };
 
-const GLITTER_LABELS: Record<string, string> = {
-  rainbow: "Rainbow glitter",
-  gold: "Gold glitter",
-  silver: "Silver glitter",
-};
-
-const TOPPER_LABELS: Record<string, string> = {
-  unicorn: "Unicorn topper",
-  safari: "Safari topper",
-  "cats-dogs": "Cats & dogs topper",
-  dinosaurs: "Dinosaurs topper",
-  fairies: "Fairies topper",
-  butterflies: "Butterflies topper",
-};
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -77,15 +62,16 @@ export default function OrderForm() {
   const searchParams = useSearchParams();
 
   // Selections from the builder (all from URL params)
-  const flavor = (searchParams.get("flavor") || "vanilla") as "vanilla" | "chocolate";
-  const icingCount = searchParams.get("icing") || "3";
-  const topping = searchParams.get("topping") || ""; // rainbow|gold|silver
-  const topperDesc = searchParams.get("topperDesc") || ""; // unicorn|safari|etc
+  const flavor = (searchParams.get("flavor") || "vanilla") as "vanilla" | "chocolate" | "half-half";
+  const frostingType = searchParams.get("frostingType") || "";
+  const frostingColorNote = searchParams.get("frostingColorNote") || "";
+  const topperKind = searchParams.get("topperKind") || ""; // paper|toy|custom
+  const customTopperDesc = searchParams.get("customTopperDesc") || "";
+  const customTopperImageUrl = searchParams.get("customTopperImageUrl") || "";
   const rawQty = Number(searchParams.get("qty") || "12");
   const qty = ([6, 12, 18, 24, 36, 48].includes(rawQty) ? rawQty : 12) as 6 | 12 | 18 | 24 | 36 | 48;
 
-  const hasTopper = !!topperDesc;
-  const hasGlitter = !!topping;
+  const hasTopper = topperKind === "paper" || topperKind === "toy";
 
   // Form state
   const [form, setForm] = useState<FormState>(INITIAL);
@@ -115,7 +101,6 @@ export default function OrderForm() {
   const total = calculateTotal({
     quantity: qty,
     topper: hasTopper,
-    hasExtras: hasGlitter,
     delivery: form.fulfillment === "delivery",
   });
 
@@ -234,12 +219,12 @@ export default function OrderForm() {
               : null,
           quantity: qty,
           flavor,
-          icingColors: [`${icingCount}-colour-swirl`],
+          icingColors: [frostingType],
           topper: hasTopper,
-          topperDescription: topperDesc || null,
-          sprinklesOrGlitter: topping || null,
+          topperDescription: topperKind === "custom" ? customTopperDesc || null : topperKind || null,
+          sprinklesOrGlitter: null,
           notes: form.notes || null,
-          referenceImageUrl: imageUrl || null,
+          referenceImageUrl: customTopperImageUrl || imageUrl || null,
         }),
       });
       const data = await res.json();
@@ -263,18 +248,14 @@ export default function OrderForm() {
   const summaryItems = [
     { label: "Quantity", value: `${qty} cupcakes`, price: `$${PRICES[qty]}` },
     { label: "Flavour", value: FLAVOR_LABELS[flavor] ?? flavor },
-    { label: "Frosting", value: FROSTING_LABELS[icingCount] ?? `${icingCount} colours` },
-    ...(hasGlitter
-      ? [{ label: "Glitter", value: GLITTER_LABELS[topping] ?? topping, price: `+$${ADDON_EXTRAS}` }]
-      : []),
-    ...(hasTopper
-      ? [
-          {
-            label: "Topper",
-            value: TOPPER_LABELS[topperDesc] ?? topperDesc,
-            price: `+$${ADDON_TOPPER}`,
-          },
-        ]
+    ...(frostingType ? [{ label: "Frosting", value: FROSTING_LABELS[frostingType] ?? frostingType }] : []),
+    ...(frostingColorNote ? [{ label: "Colors", value: frostingColorNote }] : []),
+    ...(topperKind === "paper"
+      ? [{ label: "Topper", value: "Paper topper (+$0.50 each)", price: `+$${(0.5 * qty).toFixed(2).replace(".00", "")}` }]
+      : topperKind === "toy"
+      ? [{ label: "Topper", value: "Toy topper (+$1.50 each)", price: `+$${(1.5 * qty).toFixed(2).replace(".00", "")}` }]
+      : topperKind === "custom"
+      ? [{ label: "Topper", value: "Custom topper (Jo will quote)" }]
       : []),
     ...(form.fulfillment === "delivery"
       ? [{ label: "Delivery", value: "Austin ISD area", price: `+$${ADDON_DELIVERY}` }]
