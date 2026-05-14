@@ -8,7 +8,7 @@ const MONTH_NAMES = [
 ];
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

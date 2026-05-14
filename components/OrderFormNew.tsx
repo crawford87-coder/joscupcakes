@@ -1,12 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   PRICES,
+  ADDON_TOPPER,
   ADDON_DELIVERY,
+  ADDON_EXTRAS,
   calculateTotal,
   isAustinISDZip,
   isPickupDateValid,
@@ -16,21 +17,29 @@ import {
 // ── Label maps ────────────────────────────────────────────────
 
 const FLAVOR_LABELS: Record<string, string> = {
-  vanilla:     "Vanilla",
-  chocolate:   "Chocolate",
-  "half-half": "Half vanilla, half chocolate",
+  vanilla: "Vanilla",
+  chocolate: "Chocolate",
 };
 
 const FROSTING_LABELS: Record<string, string> = {
-  "1-color": "1-color frosting",
-  "3-color": "3-color frosting",
-  "rainbow": "Rainbow frosting",
+  "3": "3-colour frosting",
+  "4": "4-colour frosting",
+  "5": "5-colour frosting",
 };
 
-const TOPPER_KIND_LABELS: Record<string, string> = {
-  paper:  "Paper topper",
-  toy:    "Toy topper",
-  custom: "Custom topper",
+const GLITTER_LABELS: Record<string, string> = {
+  rainbow: "Rainbow glitter",
+  gold: "Gold glitter",
+  silver: "Silver glitter",
+};
+
+const TOPPER_LABELS: Record<string, string> = {
+  unicorn: "Unicorn topper",
+  safari: "Safari topper",
+  "cats-dogs": "Cats & dogs topper",
+  dinosaurs: "Dinosaurs topper",
+  fairies: "Fairies topper",
+  butterflies: "Butterflies topper",
 };
 
 // ── Types ─────────────────────────────────────────────────────
@@ -67,14 +76,15 @@ export default function OrderForm() {
   const searchParams = useSearchParams();
 
   // Selections from the builder (all from URL params)
-  const flavor = (searchParams.get("flavor") || "vanilla") as "vanilla" | "chocolate" | "half-half";
-  const frostingType = searchParams.get("frostingType") || "1-color";
-  const frostingColorNote = searchParams.get("frostingColorNote") || "";
-  const topperKind = searchParams.get("topperKind") || ""; // paper|toy|custom|""
+  const flavor = (searchParams.get("flavor") || "vanilla") as "vanilla" | "chocolate";
+  const icingCount = searchParams.get("icing") || "3";
+  const topping = searchParams.get("topping") || ""; // rainbow|gold|silver
+  const topperDesc = searchParams.get("topperDesc") || ""; // unicorn|safari|etc
   const rawQty = Number(searchParams.get("qty") || "12");
   const qty = ([6, 12, 18, 24, 36, 48].includes(rawQty) ? rawQty : 12) as 6 | 12 | 18 | 24 | 36 | 48;
 
-  const hasTopper = !!topperKind && topperKind !== "custom";
+  const hasTopper = !!topperDesc;
+  const hasGlitter = !!topping;
 
   // Form state
   const [form, setForm] = useState<FormState>(INITIAL);
@@ -104,6 +114,7 @@ export default function OrderForm() {
   const total = calculateTotal({
     quantity: qty,
     topper: hasTopper,
+    hasExtras: hasGlitter,
     delivery: form.fulfillment === "delivery",
   });
 
@@ -222,11 +233,11 @@ export default function OrderForm() {
               : null,
           quantity: qty,
           flavor,
-          icingColors: [frostingType],
-          topper: !!topperKind,
-          topperDescription: topperKind || null,
-          sprinklesOrGlitter: null,
-          notes: [frostingColorNote ? `Frosting colors: ${frostingColorNote}` : "", form.notes || ""].filter(Boolean).join("\n\n") || null,
+          icingColors: [`${icingCount}-colour-swirl`],
+          topper: hasTopper,
+          topperDescription: topperDesc || null,
+          sprinklesOrGlitter: topping || null,
+          notes: form.notes || null,
           referenceImageUrl: imageUrl || null,
         }),
       });
@@ -248,22 +259,24 @@ export default function OrderForm() {
 
   // ── Summary items ─────────────────────────────────────────
 
-  const topperAddonPrice = hasTopper
-    ? calculateTotal({ quantity: qty, topper: true, delivery: false }) - calculateTotal({ quantity: qty, topper: false, delivery: false })
-    : 0;
-
   const summaryItems = [
-    { label: "Quantity", value: `${qty} cupcakes`, suffix: `$${PRICES[qty]}` },
-    { label: "Flavor",   value: FLAVOR_LABELS[flavor] ?? flavor },
-    { label: "Frosting", value: FROSTING_LABELS[frostingType] ?? frostingType },
-    ...(frostingColorNote ? [{ label: "Colors", value: frostingColorNote }] : []),
-    ...(topperKind ? [{
-      label: "Topper",
-      value: TOPPER_KIND_LABELS[topperKind] ?? topperKind,
-      suffix: topperKind === "custom" ? "Jo will quote" : topperAddonPrice > 0 ? `+$${topperAddonPrice}` : undefined,
-    }] : []),
+    { label: "Quantity", value: `${qty} cupcakes`, price: `$${PRICES[qty]}` },
+    { label: "Flavour", value: FLAVOR_LABELS[flavor] ?? flavor },
+    { label: "Frosting", value: FROSTING_LABELS[icingCount] ?? `${icingCount} colours` },
+    ...(hasGlitter
+      ? [{ label: "Glitter", value: GLITTER_LABELS[topping] ?? topping, price: `+$${ADDON_EXTRAS}` }]
+      : []),
+    ...(hasTopper
+      ? [
+          {
+            label: "Topper",
+            value: TOPPER_LABELS[topperDesc] ?? topperDesc,
+            price: `+$${ADDON_TOPPER}`,
+          },
+        ]
+      : []),
     ...(form.fulfillment === "delivery"
-      ? [{ label: "Delivery", value: "Austin delivery", suffix: `+$${ADDON_DELIVERY}` }]
+      ? [{ label: "Delivery", value: "Austin ISD area", price: `+$${ADDON_DELIVERY}` }]
       : []),
   ];
 
@@ -285,67 +298,54 @@ export default function OrderForm() {
 
       {/* ── Order summary ──────────────────────────────────── */}
       <section
-        className="rounded-2xl p-6"
+        className="rounded-3xl p-7 space-y-4"
         style={{ backgroundColor: "#F5F0E8", border: "1px solid #E8DDD4" }}
       >
-        <h2 className="font-eb-garamond text-2xl mb-3" style={{ color: "#4A2545" }}>
+        <h2 className="font-caveat text-2xl" style={{ color: "#3D2B1F" }}>
           Your cupcake ✦
         </h2>
-
-        <ul style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {summaryItems.map(({ label, value, suffix }) => (
-            <li key={label} className="flex items-center justify-between">
-              <span className="font-sans text-sm font-medium" style={{ color: "#5C3A50", fontSize: 15 }}>
+        <ul className="space-y-2">
+          {summaryItems.map(({ label, value, price }) => (
+            <li key={label} className="flex items-baseline justify-between gap-4">
+              <span className="font-im-fell italic text-sm opacity-50" style={{ color: "#6B5C52" }}>
                 {label}
               </span>
-              <span className="flex items-baseline gap-1.5">
-                <span className="font-sans font-medium" style={{ color: "#2D1A2E", fontSize: 15 }}>
+              <span className="flex items-center gap-3">
+                <span className="font-caveat text-base" style={{ color: "#3D2B1F" }}>
                   {value}
                 </span>
-                {suffix && (
-                  <span className="font-sans text-xs" style={{ color: "#9A7888", fontSize: 12 }}>
-                    {suffix}
+                {price && (
+                  <span className="font-caveat text-sm" style={{ color: "#D4788E" }}>
+                    {price}
                   </span>
                 )}
               </span>
             </li>
           ))}
         </ul>
-
-        <div style={{ borderTop: "1px solid rgba(74,37,69,0.12)", margin: "14px 0" }} />
-
-        <div className="flex items-end justify-between gap-4">
-          <span className="font-eb-garamond" style={{ fontSize: 18, color: "#4A2545" }}>
+        <div
+          className="mt-4 pt-4 flex items-baseline justify-between"
+          style={{ borderTop: "1px dashed #C4AED8" }}
+        >
+          <span className="font-caveat text-sm opacity-60" style={{ color: "#6B5C52" }}>
             Estimated total
           </span>
-          <div className="text-right">
-            <span className="font-eb-garamond font-medium block" style={{ fontSize: 28, color: "#D4788E", lineHeight: 1.1 }}>
-              ${total}
-            </span>
-            <span className="font-eb-garamond italic block" style={{ fontSize: 12, color: "#9A7888", marginTop: 3 }}>
-              Jo will confirm the final price in her reply
-            </span>
-          </div>
+          <span className="font-cormorant italic font-medium text-4xl" style={{ color: "#D4788E" }}>
+            ${total}
+          </span>
         </div>
+        <p className="font-im-fell italic text-xs opacity-50 text-center" style={{ color: "#6B5C52" }}>
+          Jo will confirm the final price in her reply
+        </p>
       </section>
 
       {/* ── Lead time notice ────────────────────────────────── */}
       <div
-        className="rounded-r-lg flex items-start gap-2.5 px-4 py-3"
-        style={{
-          backgroundColor: "#FDF7F2",
-          borderTop: "1px solid #EDE0D6",
-          borderRight: "1px solid #EDE0D6",
-          borderBottom: "1px solid #EDE0D6",
-          borderLeft: "3px solid #C4886A",
-        }}
+        className="rounded-2xl px-5 py-3 text-center"
+        style={{ backgroundColor: "#F2C9A8", border: "1px solid #E8C4A0" }}
       >
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }}>
-          <circle cx="8" cy="8" r="6.5" stroke="#C4886A" strokeWidth="1.3" />
-          <path d="M8 4.5V8.5L10.5 10.5" stroke="#C4886A" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <p className="font-sans" style={{ fontSize: 13, color: "#3D2030", lineHeight: 1.5 }}>
-          72 hours minimum lead time · 1 week for orders of 24 or more cupcakes
+        <p className="font-im-fell italic text-sm" style={{ color: "#5C3D2B" }}>
+          72 hours minimum · 1 week for 24 or more cupcakes
         </p>
       </div>
 
@@ -406,10 +406,10 @@ export default function OrderForm() {
                 boxShadow: form.fulfillment === type ? "0 2px 12px rgba(212,120,142,0.15)" : "none",
               }}
             >
-              <span className="font-eb-garamond text-lg capitalize" style={{ color: "#4A2545" }}>
+              <span className="font-caveat text-lg capitalize" style={{ color: "#3D2B1F" }}>
                 {type}
               </span>
-              <span className="font-eb-garamond italic text-xs opacity-60" style={{ color: "#7A4A6E" }}>
+              <span className="font-im-fell italic text-xs opacity-60" style={{ color: "#6B5C52" }}>
                 {type === "delivery"
                   ? `+$${ADDON_DELIVERY} · Austin ISD only`
                   : "Free · address sent on confirmation"}
@@ -465,8 +465,8 @@ export default function OrderForm() {
       {/* ── Special requests ───────────────────────────────── */}
       <section className="space-y-4">
         <SectionHeading>Special requests</SectionHeading>
-        <p className="font-eb-garamond italic text-sm opacity-60" style={{ color: "#7A4A6E" }}>
-          Allergies, specific colors, a message on the box — anything goes.
+        <p className="font-im-fell italic text-sm opacity-60" style={{ color: "#6B5C52" }}>
+          Allergies, specific colours, a message on the box — anything goes.
         </p>
         <textarea
           value={form.notes}
@@ -482,7 +482,7 @@ export default function OrderForm() {
       {/* ── Reference image ────────────────────────────────── */}
       <section className="space-y-4">
         <SectionHeading>Reference image</SectionHeading>
-        <p className="font-eb-garamond italic text-sm opacity-60" style={{ color: "#7A4A6E" }}>
+        <p className="font-im-fell italic text-sm opacity-60" style={{ color: "#6B5C52" }}>
           Got inspo? A party theme, a character, a vibe — upload a pic and Jo will
           match the magic. Optional.
         </p>
@@ -501,7 +501,7 @@ export default function OrderForm() {
                 className="absolute inset-0 flex items-center justify-center rounded-2xl"
                 style={{ backgroundColor: "rgba(250,247,242,0.8)" }}
               >
-                <span className="font-eb-garamond text-sm" style={{ color: "#D4788E" }}>
+                <span className="font-caveat text-sm" style={{ color: "#D4788E" }}>
                   Uploading…
                 </span>
               </div>
@@ -535,12 +535,12 @@ export default function OrderForm() {
             }
           >
             <span className="text-3xl opacity-60">🖼</span>
-            <span className="font-eb-garamond text-base" style={{ color: "#7A4A6E" }}>
+            <span className="font-caveat text-base" style={{ color: "#6B5C52" }}>
               Click to upload an image
             </span>
             <span
-              className="font-eb-garamond italic text-xs opacity-50"
-              style={{ color: "#7A4A6E" }}
+              className="font-im-fell italic text-xs opacity-50"
+              style={{ color: "#6B5C52" }}
             >
               JPG, PNG, WEBP · up to 10 MB
             </span>
@@ -557,12 +557,12 @@ export default function OrderForm() {
         />
 
         {imageError && (
-          <p className="font-eb-garamond italic text-sm" style={{ color: "#C0392B" }}>
+          <p className="font-im-fell italic text-sm" style={{ color: "#C0392B" }}>
             {imageError}
           </p>
         )}
         {!imageUploading && imageUrl && (
-          <p className="font-eb-garamond italic text-sm" style={{ color: "#6B9C6B" }}>
+          <p className="font-im-fell italic text-sm" style={{ color: "#6B9C6B" }}>
             ✓ Image uploaded
           </p>
         )}
@@ -574,7 +574,7 @@ export default function OrderForm() {
           className="rounded-2xl px-5 py-4 text-center"
           style={{ backgroundColor: "#FDE8E8", border: "1px solid #E8BABA" }}
         >
-          <p className="font-eb-garamond italic text-sm" style={{ color: "#8B2020" }}>
+          <p className="font-im-fell italic text-sm" style={{ color: "#8B2020" }}>
             {errors.form}
           </p>
         </div>
@@ -585,7 +585,7 @@ export default function OrderForm() {
         <button
           type="submit"
           disabled={submitting || imageUploading}
-          className="font-eb-garamond text-xl px-12 py-4 rounded-pill transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+          className="font-caveat text-xl px-12 py-4 rounded-pill transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             backgroundColor: "#D4788E",
             color: "white",
@@ -595,8 +595,8 @@ export default function OrderForm() {
           {submitting ? "Sending…" : "✦ Send my order to Jo"}
         </button>
         <p
-          className="font-eb-garamond italic text-sm mt-4 opacity-60"
-          style={{ color: "#7A4A6E" }}
+          className="font-im-fell italic text-sm mt-4 opacity-60"
+          style={{ color: "#6B5C52" }}
         >
           Jo will reply within a day with confirmation and final price.
         </p>
@@ -609,7 +609,7 @@ export default function OrderForm() {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="font-eb-garamond text-2xl font-medium" style={{ color: "#4A2545" }}>
+    <h2 className="font-caveat text-2xl font-medium" style={{ color: "#3D2B1F" }}>
       {children}
     </h2>
   );
@@ -630,7 +630,7 @@ function Field({
 }) {
   return (
     <div className="block space-y-1.5" {...(error ? { "data-error": true } : {})}>
-      <label htmlFor={id} className="font-eb-garamond text-sm block" style={{ color: "#7A4A6E" }}>
+      <label htmlFor={id} className="font-caveat text-sm block" style={{ color: "#6B5C52" }}>
         {label}
         {required && (
           <span style={{ color: "#D4788E" }} className="ml-1">
@@ -641,7 +641,7 @@ function Field({
       {children}
       {error && (
         <span
-          className="block font-eb-garamond italic text-sm mt-1"
+          className="block font-im-fell italic text-sm mt-1"
           style={{ color: "#C0392B" }}
         >
           {error}
@@ -653,7 +653,7 @@ function Field({
 
 function inputCls(hasError: boolean) {
   return [
-    "w-full rounded-xl px-4 py-2.5 font-eb-garamond italic placeholder:opacity-40 outline-none transition-colors",
+    "w-full rounded-xl px-4 py-2.5 font-im-fell italic placeholder:opacity-40 outline-none transition-colors",
     "border-2",
     hasError ? "border-red-400" : "border-[#E8DDD4] focus:border-[#D4788E]",
     "bg-white",
@@ -674,13 +674,13 @@ function WcDivider() {
 function SuccessScreen({ referenceNumber }: { referenceNumber: string }) {
   return (
     <div
-      className="rounded-3xl p-6 sm:p-10 text-center space-y-6 max-w-lg mx-auto"
+      className="rounded-3xl p-10 text-center space-y-6 max-w-lg mx-auto"
       style={{ backgroundColor: "#F5F0E8", border: "1px solid #E8DDD4" }}
     >
       <div className="text-5xl">✦</div>
       <h2
-        className="font-eb-garamond italic font-medium leading-tight"
-        style={{ fontSize: "clamp(2rem, 5vw, 3rem)", color: "#4A2545" }}
+        className="font-cormorant italic font-medium leading-tight"
+        style={{ fontSize: "clamp(2rem, 5vw, 3rem)", color: "#3D2B1F" }}
       >
         Your wish is on its way
       </h2>
@@ -688,27 +688,27 @@ function SuccessScreen({ referenceNumber }: { referenceNumber: string }) {
         className="rounded-2xl px-6 py-5"
         style={{ backgroundColor: "#FAF7F2", border: "1px dashed #C4AED8" }}
       >
-        <p className="font-eb-garamond text-sm opacity-60 mb-1" style={{ color: "#7A4A6E" }}>
+        <p className="font-caveat text-sm opacity-60 mb-1" style={{ color: "#6B5C52" }}>
           Reference number
         </p>
-        <p className="font-eb-garamond italic text-4xl font-medium" style={{ color: "#D4788E" }}>
+        <p className="font-cormorant italic text-4xl font-medium" style={{ color: "#D4788E" }}>
           {referenceNumber}
         </p>
       </div>
       <p
-        className="font-eb-garamond text-lg leading-relaxed opacity-80"
-        style={{ color: "#7A4A6E" }}
+        className="font-im-fell italic text-lg leading-relaxed opacity-80"
+        style={{ color: "#6B5C52" }}
       >
         Jo will write back within a day with your final price and pickup details.
         Keep an eye on your inbox — and check spam, just in case.
       </p>
-      <Link
+      <a
         href="/"
-        className="inline-block font-eb-garamond text-lg px-8 py-3 rounded-pill transition-opacity hover:opacity-80"
+        className="inline-block font-caveat text-lg px-8 py-3 rounded-pill transition-opacity hover:opacity-80"
         style={{ backgroundColor: "#D4788E", color: "white" }}
       >
         Back to the beginning
-      </Link>
+      </a>
     </div>
   );
 }

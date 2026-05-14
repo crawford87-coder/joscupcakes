@@ -7,7 +7,6 @@ import { useState } from "react";
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
-  { href: "/gallery", label: "Gallery" },
   { href: "/faq", label: "FAQ" },
 ];
 
@@ -29,7 +28,7 @@ export default function Nav() {
           href="/"
           onClick={() => setOpen(false)}
           className="font-caveat text-xl tracking-wide transition-opacity hover:opacity-70"
-          style={{ color: "#4A2545" }}
+          style={{ color: "#3D2B1F" }}
         >
           ✦ Jo&apos;s Cupcakes
         </Link>
@@ -40,9 +39,9 @@ export default function Nav() {
             <li key={href}>
               <Link
                 href={href}
-                className="font-eb-garamond text-base transition-all"
+                className="font-caveat text-base transition-all"
                 style={{
-                  color: pathname === href ? "#D4788E" : "#7A4A6E",
+                  color: pathname === href ? "#D4788E" : "#6B5C52",
                   borderBottom: pathname === href ? "2px solid #D4788E" : "2px solid transparent",
                   paddingBottom: "2px",
                 }}
@@ -55,7 +54,7 @@ export default function Nav() {
             <Link
               href="/#build"
               onClick={() => setOpen(false)}
-              className="font-eb-garamond text-base px-5 py-2 rounded-pill transition-all"
+              className="font-caveat text-base px-5 py-2 rounded-pill transition-all"
               style={{
                 backgroundColor: "#D4788E",
                 color: "white",
@@ -74,15 +73,15 @@ export default function Nav() {
         >
           <span
             className={`block w-5 h-0.5 transition-transform duration-200 ${open ? "rotate-45 translate-y-2" : ""}`}
-            style={{ backgroundColor: "#4A2545" }}
+            style={{ backgroundColor: "#3D2B1F" }}
           />
           <span
             className={`block w-5 h-0.5 transition-opacity duration-200 ${open ? "opacity-0" : ""}`}
-            style={{ backgroundColor: "#4A2545" }}
+            style={{ backgroundColor: "#3D2B1F" }}
           />
           <span
             className={`block w-5 h-0.5 transition-transform duration-200 ${open ? "-rotate-45 -translate-y-2" : ""}`}
-            style={{ backgroundColor: "#4A2545" }}
+            style={{ backgroundColor: "#3D2B1F" }}
           />
         </button>
       </nav>
@@ -102,8 +101,8 @@ export default function Nav() {
               key={href}
               href={href}
               onClick={() => setOpen(false)}
-              className="font-eb-garamond text-lg transition-colors"
-              style={{ color: pathname === href ? "#D4788E" : "#7A4A6E" }}
+              className="font-caveat text-lg transition-colors"
+              style={{ color: pathname === href ? "#D4788E" : "#6B5C52" }}
             >
               {label}
             </Link>
@@ -111,7 +110,7 @@ export default function Nav() {
           <Link
             href="/#build"
             onClick={() => setOpen(false)}
-              className="font-eb-garamond text-lg py-3 rounded-pill text-center transition-all"
+            className="font-caveat text-lg py-3 rounded-pill text-center transition-all"
             style={{ backgroundColor: "#D4788E", color: "white" }}
           >
             ✦ Build a Cupcake

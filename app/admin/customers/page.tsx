@@ -7,7 +7,7 @@ import AdminCustomers, { type CustomerNote } from "@/components/AdminCustomers";
 export const metadata = { title: "Customers — Jo's Cupcakes Admin" };
 
 export default async function CustomersPage() {
-  const supabase = await createClient();
+  const supabase = createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();

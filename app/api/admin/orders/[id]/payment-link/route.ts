@@ -3,21 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 import { sendPaymentRequestEmail } from "@/lib/email";
 
-function getBaseUrl(req: NextRequest) {
-  const configuredSiteUrl = process.env.SITE_URL?.trim();
-  if (configuredSiteUrl && /^https?:\/\//i.test(configuredSiteUrl)) {
-    return configuredSiteUrl.replace(/\/$/, "");
-  }
-
-  return req.nextUrl.origin;
-}
-
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await params;
-  const supabase = await createClient();
+  const supabase = createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -29,7 +19,7 @@ export async function POST(
   const { data: order, error } = await supabase
     .from("orders")
     .select("*")
-    .eq("id", id)
+    .eq("id", params.id)
     .single();
 
   if (error || !order) {
@@ -43,7 +33,7 @@ export async function POST(
     );
   }
 
-  const baseUrl = getBaseUrl(req);
+  const origin = req.nextUrl.origin;
   const totalPrice = Number(order.total_price);
 
   // Orders over $80 → 50% deposit; under $80 → full payment
@@ -75,8 +65,8 @@ export async function POST(
       orderId: order.id,
       referenceNumber: order.reference_number,
     },
-    success_url: `${baseUrl}/order/payment-success?ref=${order.reference_number}`,
-    cancel_url: `${baseUrl}/order/payment-cancelled?ref=${order.reference_number}`,
+    success_url: `${origin}/order/payment-success?ref=${order.reference_number}`,
+    cancel_url: `${origin}/order/payment-cancelled?ref=${order.reference_number}`,
   });
 
   // Update order with session ID and status

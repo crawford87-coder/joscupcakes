@@ -155,14 +155,14 @@ export function StepPill({
       style={{ backgroundColor: color + "33", border: `1.5px solid ${color}66` }}
     >
       <span
-        className="font-eb-garamond text-sm font-bold"
-        style={{ color: "#4A2545" }}
+        className="font-caveat text-sm font-bold"
+        style={{ color: "#3D2B1F" }}
       >
         {number}
       </span>
       <span
-        className="font-eb-garamond text-sm"
-        style={{ color: "#7A4A6E" }}
+        className="font-caveat text-sm"
+        style={{ color: "#6B5C52" }}
       >
         {label}
       </span>
@@ -188,7 +188,7 @@ export function WcSelectionCard({
   return (
     <button
       onClick={onClick}
-      className={`relative rounded-3xl p-3 sm:p-5 text-center transition-all duration-300 bg-wc-cream ${className}`}
+      className={`relative rounded-3xl p-5 text-center transition-all duration-300 bg-wc-cream ${className}`}
       style={{
         border: selected ? `2px solid ${accentColor}` : "2px solid transparent",
         boxShadow: selected
@@ -239,12 +239,12 @@ export function StepProgress({
             aria-label={`Step ${i + 1}: ${s.label}`}
           >
             <div
-              className="flex items-center justify-center rounded-full transition-all duration-300 font-eb-garamond text-xs font-bold"
+              className="flex items-center justify-center rounded-full transition-all duration-300 font-caveat text-xs font-bold"
               style={{
                 width: isActive ? 32 : 24,
                 height: isActive ? 32 : 24,
                 backgroundColor: isComplete || isActive ? s.color : "#E8E0D8",
-                color: isComplete || isActive ? "#4A2545" : "#A688A0",
+                color: isComplete || isActive ? "#3D2B1F" : "#9E9088",
                 boxShadow: isActive ? `0 0 0 4px ${s.color}44` : "none",
               }}
             >

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
@@ -13,21 +12,37 @@ import {
   WcSelectionCard,
   StepProgress,
 } from "./WatercolorUI";
-import { PRICES_NO_TOPPER, ADDON_DELIVERY } from "@/lib/pricing";
-import { stripBlackBg } from "@/lib/stripBlackBg";
+import { PRICES, ADDON_TOPPER, ADDON_DELIVERY } from "@/lib/pricing";
 
-type TopperChoice = "" | "paper" | "toy" | "custom";
-const TOPPER_RATE: Record<string, number> = { paper: 0.5, toy: 1.5 };
+const PASTEL_PALETTE = [
+  { id: "pink",   label: "Pink",   hex: "#F4C0D1" },
+  { id: "purple", label: "Purple", hex: "#C5B8E8" },
+  { id: "blue",   label: "Blue",   hex: "#A8C8E8" },
+  { id: "green",  label: "Green",  hex: "#B5D9C7" },
+  { id: "yellow", label: "Yellow", hex: "#F0D898" },
+];
 
-type Flavor = "vanilla" | "chocolate" | "half-half" | "";
-type FrostingType = "1-color" | "3-color" | "rainbow" | "";
+const BRIGHT_PALETTE = [
+  { id: "hot-pink",      label: "Pink",   hex: "#F06090" },
+  { id: "bright-purple", label: "Purple", hex: "#9B59B6" },
+  { id: "bright-blue",   label: "Blue",   hex: "#3498DB" },
+  { id: "bright-green",  label: "Green",  hex: "#2ECC71" },
+  { id: "bright-yellow", label: "Yellow", hex: "#F1C40F" },
+];
+
+type Flavor = "vanilla" | "chocolate" | "";
+type FrostingCount = 1 | 2 | 3 | 5 | 0;
+type GlitterType = "rainbow-sugar" | "gold-glitter" | "sprinkles" | "";
+type TopperType = "unicorn" | "safari" | "pets" | "dinosaur" | "fairy" | "custom" | "";
 type Qty = 6 | 12 | 18 | 24 | 36 | 48;
 
 interface BuildState {
   flavor: Flavor;
-  frosting: FrostingType;
-  frostingColorNote: string;
-  topperChoice: TopperChoice;
+  frosting: FrostingCount;
+  paletteType: "pastel" | "bright" | "";
+  selectedColors: string[];
+  glitter: GlitterType;
+  topper: TopperType;
   customTopperDesc: string;
   customTopperImageUrl: string | null;
   quantity: Qty;
@@ -35,9 +50,11 @@ interface BuildState {
 
 const INITIAL: BuildState = {
   flavor: "",
-  frosting: "",
-  frostingColorNote: "",
-  topperChoice: "",
+  frosting: 0,
+  paletteType: "",
+  selectedColors: [],
+  glitter: "",
+  topper: "",
   customTopperDesc: "",
   customTopperImageUrl: null,
   quantity: 12,
@@ -46,60 +63,51 @@ const INITIAL: BuildState = {
 const STEP_COLORS = [
   { label: "Base",     color: "#F2C9A8" },
   { label: "Frosting", color: "#C4AED8" },
+  { label: "Glitter",  color: "#F0D898" },
   { label: "Topper",   color: "#A8C8E8" },
 ];
 
-const FROSTING_OPTIONS: { id: FrostingType; label: string; desc: string; img: string }[] = [
-  { id: "1-color", label: "1 color",  desc: "one dreamy swirl",              img: "/cupcakes/swirl-single.png" },
-  { id: "3-color", label: "3 colors", desc: "triple swirl",                  img: "/cupcakes/swirl-triple.png" },
-  { id: "rainbow", label: "Rainbow meringue", desc: "meringue on buttercream", img: "/cupcakes/swirl-rainbow.png" },
+const FROSTING_OPTIONS: { count: FrostingCount; label: string; desc: string; img: string }[] = [
+  { count: 1, label: "Single swirl", desc: "one dreamy colour",  img: "/cupcakes/swirl-single.png" },
+  { count: 2, label: "Dual swirl",   desc: "two-tone twist",     img: "/cupcakes/swirl-dual.png" },
+  { count: 3, label: "Triple swirl", desc: "three-colour swirl", img: "/cupcakes/swirl-triple.jpeg" },
+  { count: 5, label: "Rainbow",      desc: "all five colours",   img: "/cupcakes/swirl-rainbow.jpeg" },
 ];
 
+const GLITTER_OPTIONS: { id: GlitterType; label: string; desc: string; img: string }[] = [
+  { id: "rainbow-sugar", label: "Rainbow sugar", desc: "pastel crystal shimmer", img: "/cupcakes/glitter-rainbow.png" },
+  { id: "gold-glitter",  label: "Gold glitter",  desc: "warm & radiant",         img: "/cupcakes/glitter-gold.png" },
+  { id: "sprinkles",     label: "Sprinkles",     desc: "classic rainbow jimmies", img: "/cupcakes/sprinkles.png" },
+];
 
-const TOPPER_IMAGES: Record<string, string> = {
-  paper:  "/cupcakes/topper-fairy.png",
-  toy:    "/cupcakes/topper-dinosaur.png",
-  custom: "/cupcakes/topper-unicorn.png",
-};
+const TOPPER_OPTIONS: { id: TopperType; label: string; img: string }[] = [
+  { id: "unicorn",  label: "Unicorn",    img: "/cupcakes/topper-unicorn.png" },
+  { id: "safari",   label: "Safari",     img: "/cupcakes/topper-safari.png" },
+  { id: "pets",     label: "Pets",       img: "/cupcakes/topper-pets.png" },
+  { id: "dinosaur", label: "Dinosaurs",  img: "/cupcakes/topper-dinosaur.png" },
+  { id: "fairy",    label: "Fairies",    img: "/cupcakes/topper-fairy.png" },
+  { id: "custom",   label: "Custom \u2726", img: "" },
+];
 
-const FLAVOR_DISPLAY: Record<string, string> = {
-  vanilla:    "Vanilla",
-  chocolate:  "Chocolate",
-  "half-half": "Half & Half",
-};
+function colorsNeeded(frosting: FrostingCount): number {
+  if (frosting === 5) return 5;
+  return frosting as number;
+}
 
 export default function WatercolorBuilder() {
   const router = useRouter();
   const [build, setBuild] = useState<BuildState>(INITIAL);
   const [activeStep, setActiveStep] = useState(0);
+  const [mobileBuilderOpen, setMobileBuilderOpen] = useState(false);
+  const [mobileStep, setMobileStep] = useState(1);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [customImagePreview, setCustomImagePreview] = useState<string | null>(null);
   const [customImageUploading, setCustomImageUploading] = useState(false);
   const [customImageError, setCustomImageError] = useState<string | null>(null);
   const customFileRef = useRef<HTMLInputElement>(null);
-  // 0=hero, 1=base, 2=frosting, 3=topper
-  const stepRefs = useRef<(HTMLElement | null)[]>([null, null, null, null]);
+  const stepRefs = useRef<(HTMLElement | null)[]>([null, null, null, null, null]);
   const summaryRef = useRef<HTMLElement | null>(null);
-  const stickyCardRef = useRef<HTMLDivElement | null>(null);
-  const [previewVisible, setPreviewVisible] = useState(true);
-  const [mobileModalOpen, setMobileModalOpen] = useState(false);
-  const [mobileStep, setMobileStep] = useState(0);
-  const [modalClosing, setModalClosing] = useState(false);
-  const scrollToSummary = useCallback(() => {
-    summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
-
-  useEffect(() => {
-    const check = () => {
-      if (!stickyCardRef.current || !summaryRef.current) return;
-      const cardBottom = stickyCardRef.current.getBoundingClientRect().bottom;
-      const summaryTop = summaryRef.current.getBoundingClientRect().top;
-      setPreviewVisible(summaryTop - cardBottom >= 8);
-    };
-    check();
-    window.addEventListener("scroll", check, { passive: true });
-    return () => window.removeEventListener("scroll", check);
-  }, []);
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -116,10 +124,24 @@ export default function WatercolorBuilder() {
   }, []);
 
   useEffect(() => {
-    if (mobileModalOpen) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "";
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = (event: MediaQueryListEvent | MediaQueryList) => setIsMobileViewport(event.matches);
+    update(mq);
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (mobileBuilderOpen && isMobileViewport) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    if (!isMobileViewport) {
+      setMobileBuilderOpen(false);
+    }
     return () => { document.body.style.overflow = ""; };
-  }, [mobileModalOpen]);
+  }, [mobileBuilderOpen, isMobileViewport]);
 
   const scrollToStep = useCallback((i: number) => {
     stepRefs.current[i]?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -129,17 +151,19 @@ export default function WatercolorBuilder() {
     setBuild((prev) => ({ ...prev, [key]: val }));
   }, []);
 
-  function closeMobileModal() {
-    setModalClosing(true);
-    setTimeout(() => { setModalClosing(false); setMobileModalOpen(false); setMobileStep(0); }, 280);
-  }
-  function mobileNext() {
-    if (mobileStep < 3) setMobileStep((s) => s + 1);
-    else handleStartOrder();
-  }
-  function mobileBack() {
-    if (mobileStep === 0) closeMobileModal();
-    else setMobileStep((s) => s - 1);
+  const setFrosting = useCallback((count: FrostingCount) => {
+    setBuild((prev) => ({ ...prev, frosting: count, paletteType: "", selectedColors: [] }));
+  }, []);
+
+  function toggleColor(colorId: string) {
+    const needed = colorsNeeded(build.frosting);
+    setBuild((prev) => {
+      const has = prev.selectedColors.includes(colorId);
+      if (has) return { ...prev, selectedColors: prev.selectedColors.filter((c) => c !== colorId) };
+      if (prev.selectedColors.length >= needed)
+        return { ...prev, selectedColors: [...prev.selectedColors.slice(0, needed - 1), colorId] };
+      return { ...prev, selectedColors: [...prev.selectedColors, colorId] };
+    });
   }
 
   async function handleCustomImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -167,28 +191,72 @@ export default function WatercolorBuilder() {
     }
   }
 
+  const palette = build.paletteType === "bright" ? BRIGHT_PALETTE : PASTEL_PALETTE;
+  const needed = build.frosting ? colorsNeeded(build.frosting) : 0;
+  const colorsSelected = build.selectedColors.length === needed && needed > 0;
+
   const completedSteps = [
     build.flavor ? 0 : -1,
-    build.frosting ? 1 : -1,
-    build.topperChoice ? 2 : -1,
+    (build.frosting && colorsSelected) ? 1 : -1,
+    build.glitter ? 2 : -1,
+    build.topper ? 3 : -1,
   ].filter((n) => n >= 0);
 
-  const isComplete = !!(build.flavor && build.frosting);
-  const topperAddon = Math.round((TOPPER_RATE[build.topperChoice] ?? 0) * build.quantity * 100) / 100;
-  const basePrice = PRICES_NO_TOPPER[build.quantity] ?? 0;
-  const total = basePrice + topperAddon;
-  const priceForQty = (q: number) => (PRICES_NO_TOPPER[q] ?? 0) + Math.round((TOPPER_RATE[build.topperChoice] ?? 0) * q * 100) / 100;
-  const topperLabel = build.topperChoice === "paper" ? "Paper topper" : build.topperChoice === "toy" ? "Toy topper" : build.topperChoice === "custom" ? "Custom topper" : "";
-  const frostingLabel = FROSTING_OPTIONS.find((f) => f.id === build.frosting)?.label ?? "";
+  const isComplete = !!(build.flavor && build.frosting && colorsSelected && build.glitter && build.topper);
+  const basePrice = PRICES[build.quantity] ?? 0;
+  const topperPrice = build.topper ? ADDON_TOPPER : 0;
+  const total = basePrice + topperPrice;
+  const topperLabel = build.topper === "custom" ? "Custom topper" : TOPPER_OPTIONS.find((t) => t.id === build.topper)?.label ?? "";
+  const isMobileModalActive = mobileBuilderOpen && isMobileViewport;
+  const mobileProgress = ((mobileStep - 1) / 3) * 100;
+  const mobileCanAdvance = mobileStep === 1
+    ? !!build.flavor
+    : mobileStep === 2
+    ? !!(build.frosting && colorsSelected)
+    : mobileStep === 3
+    ? !!build.glitter
+    : mobileStep === 4
+    ? !!build.topper
+    : false;
+
+  function openMobileBuilder() {
+    setMobileStep(1);
+    setMobileBuilderOpen(true);
+  }
+
+  function closeMobileBuilder() {
+    setMobileBuilderOpen(false);
+  }
+
+  function handleMobileBack() {
+    if (mobileStep === 1) {
+      closeMobileBuilder();
+    } else {
+      setMobileStep((step) => Math.max(1, step - 1));
+    }
+  }
+
+  function handleMobileNext() {
+    if (mobileStep === 4) {
+      closeMobileBuilder();
+      setTimeout(() => {
+        summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    } else {
+      setMobileStep((step) => Math.min(4, step + 1));
+    }
+  }
 
   function handleStartOrder() {
     const params = new URLSearchParams();
     if (build.flavor) params.set("flavor", build.flavor);
-    if (build.frosting) params.set("frostingType", build.frosting);
-    if (build.frostingColorNote) params.set("frostingColorNote", build.frostingColorNote);
-    if (build.topperChoice) params.set("topperKind", build.topperChoice);
+    if (build.frosting) params.set("icing", String(build.frosting));
+    if (build.glitter) params.set("topping", build.glitter);
+    if (build.topper) params.set("topperDesc", build.topper);
     if (build.customTopperDesc) params.set("customTopperDesc", build.customTopperDesc);
     if (build.customTopperImageUrl) params.set("customTopperImageUrl", build.customTopperImageUrl);
+    if (build.paletteType) params.set("palette", build.paletteType);
+    if (build.selectedColors.length) params.set("colors", build.selectedColors.join(","));
     params.set("qty", String(build.quantity));
     router.push(`/order?${params.toString()}`);
   }
@@ -207,196 +275,317 @@ export default function WatercolorBuilder() {
         <CornerSplash corner="top-right" color="#A8C8E8" size={180} className="absolute top-0 right-0" />
         <CornerSplash corner="bottom-right" color="#E8A0B0" size={160} className="absolute bottom-0 right-0" />
         <div className="relative z-10 max-w-3xl mx-auto">
+          <p className="font-caveat text-base tracking-wide mb-6 opacity-60" style={{ color: "#6B5C52" }}>
+            \u2014 made with love in austin \u2014
+          </p>
           <div className="flex justify-center mb-8">
             <div className="relative w-[min(480px,85vw)] aspect-[4/3] drop-shadow-xl">
-              <Image src="/cupcakes/hero.png" alt="Five beautifully decorated watercolor cupcakes" fill sizes="(max-width: 768px) 85vw, 480px" className="object-contain" priority />
+              <Image src="/cupcakes/hero.png" alt="Five beautifully decorated watercolour cupcakes" fill sizes="(max-width: 768px) 85vw, 480px" className="object-contain" priority />
             </div>
           </div>
-          <div className="relative mb-6">
-            {/* Disney-opening sparkle burst */}
-            <span aria-hidden="true" className="sparkle-field">
-              {/* Cluster 1 — left side of text */}
-              <span className="sp sp-xl sp-gold   sp-a1"  style={{ left:"8%",  top:"50%", animationDuration:"2.8s", animationDelay:"0s"    }} />
-              <span className="sp sp-sm sp-white  sp-a5"  style={{ left:"12%", top:"40%", animationDuration:"2.2s", animationDelay:"0.3s"   }} />
-              <span className="sp sp-md sp-rose   sp-a3"  style={{ left:"6%",  top:"65%", animationDuration:"2.5s", animationDelay:"0.7s"   }} />
-              <span className="sp sp-lg sp-peach  sp-a8"  style={{ left:"15%", top:"55%", animationDuration:"3.0s", animationDelay:"1.1s"   }} />
-              <span className="sp sp-sm sp-gold   sp-a6"  style={{ left:"10%", top:"30%", animationDuration:"1.9s", animationDelay:"0.5s"   }} />
-              {/* Cluster 2 — center */}
-              <span className="sp sp-xl sp-white  sp-a2"  style={{ left:"45%", top:"45%", animationDuration:"2.6s", animationDelay:"0.2s"   }} />
-              <span className="sp sp-lg sp-gold   sp-a9"  style={{ left:"50%", top:"60%", animationDuration:"3.1s", animationDelay:"0.8s"   }} />
-              <span className="sp sp-md sp-lavender sp-a4" style={{ left:"42%", top:"30%", animationDuration:"2.4s", animationDelay:"1.4s"   }} />
-              <span className="sp sp-sm sp-rose   sp-a11" style={{ left:"55%", top:"70%", animationDuration:"1.8s", animationDelay:"0.4s"   }} />
-              <span className="sp sp-sm sp-white  sp-a7"  style={{ left:"48%", top:"20%", animationDuration:"2.0s", animationDelay:"1.8s"   }} />
-              {/* Cluster 3 — right side */}
-              <span className="sp sp-xl sp-gold   sp-a10" style={{ left:"82%", top:"50%", animationDuration:"2.9s", animationDelay:"0.1s"   }} />
-              <span className="sp sp-lg sp-rose   sp-a2"  style={{ left:"88%", top:"35%", animationDuration:"2.3s", animationDelay:"0.6s"   }} />
-              <span className="sp sp-md sp-white  sp-a12" style={{ left:"78%", top:"65%", animationDuration:"2.7s", animationDelay:"1.0s"   }} />
-              <span className="sp sp-sm sp-peach  sp-a5"  style={{ left:"92%", top:"55%", animationDuration:"2.1s", animationDelay:"1.5s"   }} />
-              <span className="sp sp-sm sp-gold   sp-a3"  style={{ left:"85%", top:"25%", animationDuration:"1.7s", animationDelay:"0.9s"   }} />
-              {/* Accent floaters above/below text */}
-              <span className="sp sp-md sp-gold   sp-a8"  style={{ left:"30%", top:"10%", animationDuration:"2.4s", animationDelay:"1.2s"   }} />
-              <span className="sp sp-sm sp-lavender sp-a6" style={{ left:"65%", top:"15%", animationDuration:"2.0s", animationDelay:"0.2s"   }} />
-              <span className="sp sp-lg sp-white  sp-a1"  style={{ left:"25%", top:"80%", animationDuration:"3.2s", animationDelay:"1.6s"   }} />
-              <span className="sp sp-sm sp-rose   sp-a9"  style={{ left:"70%", top:"85%", animationDuration:"1.9s", animationDelay:"0.7s"   }} />
-              <span className="sp sp-md sp-gold   sp-a11" style={{ left:"38%", top:"75%", animationDuration:"2.6s", animationDelay:"2.0s"   }} />
-            </span>
-            <h1 className="font-eb-garamond italic font-medium leading-tight" style={{ fontSize: "clamp(3rem, 8vw, 5rem)", color: "#4A2545" }}>
-              Build your dream cupcake
-            </h1>
-          </div>
-          <p className="font-eb-garamond italic text-xl leading-relaxed mb-10 opacity-70" style={{ color: "#7A4A6E" }}>
-            Pick your base, frosting and topper. Then we&apos;ll bake the magic.
+          <h1 className="font-cormorant italic font-medium leading-tight mb-6" style={{ fontSize: "clamp(3rem, 8vw, 5rem)", color: "#3D2B1F" }}>
+            Build your dream cupcake
+          </h1>
+          <p className="font-im-fell italic text-xl leading-relaxed mb-10 opacity-70" style={{ color: "#6B5C52" }}>
+            Pick your base, frosting, sparkle and topper. Then we&apos;ll bake the magic.
           </p>
-          <button
-            onClick={() => {
-              if (typeof window !== "undefined" && window.innerWidth < 768) {
-                setMobileStep(0);
-                setMobileModalOpen(true);
-              } else {
-                scrollToStep(1);
-              }
-            }}
-            className="btn-primary text-xl px-8 sm:px-12 py-4 w-full sm:w-auto justify-center"
-          >
+          <button onClick={() => (isMobileViewport ? openMobileBuilder() : scrollToStep(1))} className="btn-primary text-xl px-12 py-4">
             Start Building ↓
           </button>
         </div>
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
-          <span className="font-eb-garamond text-sm" style={{ color: "#7A4A6E" }}>scroll to build</span>
+          <span className="font-caveat text-sm" style={{ color: "#6B5C52" }}>scroll to build</span>
           <svg width="16" height="24" viewBox="0 0 16 24" fill="none" className="animate-bounce">
-            <path d="M8 0 L8 20 M2 14 L8 20 L14 14" stroke="#7A4A6E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M8 0 L8 20 M2 14 L8 20 L14 14" stroke="#6B5C52" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
       </section>
 
+      {isMobileModalActive && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#FAF7F2] text-plum">
+          <div className="sticky top-0 z-20 border-b border-[#E8DDD4] bg-[#FAF7F2] backdrop-blur-sm">
+            <div className="flex items-center justify-between px-4 py-4">
+              <button
+                type="button"
+                onClick={closeMobileBuilder}
+                className="w-10 h-10 rounded-full bg-white/90 text-plum shadow-sm flex items-center justify-center transition hover:bg-white"
+                aria-label="Close builder"
+              >
+                ✕
+              </button>
+              <div className="text-center">
+                <p className="font-im-fell-sc text-[11px] uppercase tracking-[0.35em] text-plum/70">
+                  Step {mobileStep} of 4
+                </p>
+              </div>
+              <div className="w-10" />
+            </div>
+            <div className="h-1 w-full bg-[#E8DDD4]">
+              <div
+                className="h-full bg-[#D16B4B] transition-all duration-300"
+                style={{ width: `${mobileProgress}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
+            <div>
+              <h2 className="font-cormorant text-[22px] font-medium leading-tight text-[#3D2B1F] mb-2">
+                {mobileStep === 1 && "What\'s the cake?"}
+                {mobileStep === 2 && "Pick your frosting."}
+                {mobileStep === 3 && "Choose your sparkle."}
+                {mobileStep === 4 && "Choose your topper."}
+              </h2>
+              <p className="font-im-fell italic text-[13px] text-plum/70">
+                {mobileStep === 1 && "Start with your cupcake base."}
+                {mobileStep === 2 && "Select a swirl style and then paint it with color."}
+                {mobileStep === 3 && "A little shimmer makes it feel extra magical."}
+                {mobileStep === 4 && "Pick the finishing topper or add a custom idea."}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {mobileStep === 1 && (
+                <div className="space-y-4">
+                  {[
+                    { id: "vanilla" as Flavor, label: "Vanilla", desc: "Pale golden cake", img: "/cupcakes/base-vanilla.png" },
+                    { id: "chocolate" as Flavor, label: "Chocolate", desc: "Rich dark cake", img: "/cupcakes/base-choc.jpeg" },
+                  ].map(({ id, label, desc, img }) => (
+                    <WcSelectionCard
+                      key={id}
+                      selected={build.flavor === id}
+                      onClick={() => set("flavor", id)}
+                      accentColor="#D16B4B"
+                      className="w-full"
+                    >
+                      <div className="mx-auto mb-4 w-24 h-24 rounded-full bg-white shadow-sm flex items-center justify-center overflow-hidden">
+                        <Image src={img} alt={`${label} cupcake base`} width={84} height={84} className="object-contain" />
+                      </div>
+                      <p className="font-cormorant text-lg text-[#3D2B1F] mb-2">{label}</p>
+                      <p className="font-im-fell italic text-sm text-plum/70">{desc}</p>
+                    </WcSelectionCard>
+                  ))}
+                </div>
+              )}
+
+              {mobileStep === 2 && (
+                <div className="space-y-4">
+                  <div className="space-y-4">
+                    {FROSTING_OPTIONS.map(({ count, label, desc, img }) => (
+                      <WcSelectionCard
+                        key={count}
+                        selected={build.frosting === count}
+                        onClick={() => setFrosting(count)}
+                        accentColor="#D16B4B"
+                        className="w-full"
+                      >
+                        <div className="mx-auto mb-4 w-24 h-24 rounded-full bg-white shadow-sm flex items-center justify-center overflow-hidden">
+                          <Image src={img} alt={label} width={84} height={84} className="object-contain" />
+                        </div>
+                        <p className="font-cormorant text-lg text-[#3D2B1F] mb-2">{label}</p>
+                        <p className="font-im-fell italic text-sm text-plum/70">{desc}</p>
+                      </WcSelectionCard>
+                    ))}
+                  </div>
+                  {build.frosting > 0 && (
+                    <div className="rounded-3xl border border-[#E8DDD4] bg-white p-4 space-y-4">
+                      <div className="flex flex-wrap gap-2">
+                        {(["pastel", "bright"] as const).map((pt) => (
+                          <button
+                            key={pt}
+                            type="button"
+                            onClick={() => setBuild((prev) => ({ ...prev, paletteType: pt, selectedColors: [] }))}
+                            className={`rounded-full px-4 py-2 font-caveat text-sm transition ${build.paletteType === pt ? "bg-[#D16B4B] text-white" : "bg-[#F5F0E8] text-[#3D2B1F]"}`}
+                          >
+                            {pt} palette
+                          </button>
+                        ))}
+                      </div>
+                      {build.paletteType && (
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap gap-3">
+                            {palette.map(({ id, label, hex }) => {
+                              const isSelected = build.selectedColors.includes(id);
+                              return (
+                                <button
+                                  key={id}
+                                  type="button"
+                                  onClick={() => toggleColor(id)}
+                                  className="flex flex-col items-center gap-2 rounded-3xl border p-3 w-full"
+                                  style={{ borderColor: isSelected ? "#D16B4B" : "#E8DDD4", backgroundColor: isSelected ? "#F8E6DF" : "#FFFFFF" }}
+                                >
+                                  <span className="w-12 h-12 rounded-full" style={{ backgroundColor: hex, border: "2px solid #E8DDD4" }} />
+                                  <span className="font-caveat text-sm text-plum/80">{label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="font-im-fell italic text-sm text-plum/70">{build.selectedColors.length} / {needed} chosen</span>
+                            {colorsSelected && <span className="font-cormorant text-sm text-[#3D2B1F]">Ready</span>}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {mobileStep === 3 && (
+                <div className="space-y-4">
+                  {GLITTER_OPTIONS.map(({ id, label, desc, img }) => (
+                    <WcSelectionCard
+                      key={id}
+                      selected={build.glitter === id}
+                      onClick={() => set("glitter", id)}
+                      accentColor="#D16B4B"
+                      className="w-full"
+                    >
+                      <div className="mx-auto mb-4 w-24 h-24 rounded-full bg-white shadow-sm flex items-center justify-center overflow-hidden">
+                        <Image src={img} alt={label} width={84} height={84} className="object-contain" />
+                      </div>
+                      <p className="font-cormorant text-lg text-[#3D2B1F] mb-2">{label}</p>
+                      <p className="font-im-fell italic text-sm text-plum/70">{desc}</p>
+                    </WcSelectionCard>
+                  ))}
+                </div>
+              )}
+
+              {mobileStep === 4 && (
+                <div className="space-y-4">
+                  {TOPPER_OPTIONS.map(({ id, label, img }) => (
+                    <WcSelectionCard
+                      key={id}
+                      selected={build.topper === id}
+                      onClick={() => set("topper", id)}
+                      accentColor="#D16B4B"
+                      className="w-full"
+                    >
+                      <div className="mx-auto mb-4 w-24 h-24 rounded-full bg-white shadow-sm flex items-center justify-center overflow-hidden">
+                        {img ? (
+                          <Image src={img} alt={label} width={84} height={84} className="object-contain" />
+                        ) : (
+                          <span className="text-3xl">✏️</span>
+                        )}
+                      </div>
+                      <p className="font-cormorant text-lg text-[#3D2B1F] mb-2">{label}</p>
+                      {id === "custom" ? (
+                        <p className="font-im-fell italic text-sm text-plum/70">Describe something extra-special.</p>
+                      ) : null}
+                    </WcSelectionCard>
+                  ))}
+                  {build.topper === "custom" && (
+                    <div className="rounded-3xl border border-[#E8DDD4] bg-white p-4 space-y-4">
+                      <label className="block space-y-2">
+                        <span className="font-im-fell italic text-sm text-plum/70">Describe your topper</span>
+                        <textarea
+                          value={build.customTopperDesc}
+                          onChange={(e) => set("customTopperDesc", e.target.value)}
+                          rows={3}
+                          className="w-full rounded-2xl border border-[#E8DDD4] bg-[#FBF7F3] px-4 py-3 font-im-fell italic text-sm outline-none"
+                          placeholder="e.g. a little dinosaur in a birthday hat..."
+                        />
+                      </label>
+                      <label className="block space-y-2">
+                        <span className="font-im-fell italic text-sm text-plum/70">Reference image (optional)</span>
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => customFileRef.current?.click()}
+                            className="w-full rounded-2xl border border-[#E8DDD4] bg-[#F5F0E8] px-4 py-4 text-left"
+                          >
+                            Upload an image
+                          </button>
+                          <input ref={customFileRef} type="file" accept="image/*" className="hidden" onChange={handleCustomImage} />
+                        </div>
+                        {customImagePreview && (
+                          <div className="relative rounded-2xl overflow-hidden border border-[#E8DDD4] bg-white">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={customImagePreview} alt="Topper reference" className="w-full object-cover" />
+                          </div>
+                        )}
+                        {customImageUploading && <p className="font-im-fell italic text-sm text-plum/70">Uploading…</p>}
+                        {customImageError && <p className="font-im-fell italic text-sm text-red-600">{customImageError}</p>}
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="sticky bottom-0 z-20 border-t border-[#E8DDD4] bg-[#FAF7F2] p-4">
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleMobileBack}
+                className="rounded-full border border-[#C4AED8] bg-white px-4 py-3 text-sm font-im-fell-sc text-plum transition hover:bg-[#F7F2EB]"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={handleMobileNext}
+                disabled={!mobileCanAdvance}
+                className="flex-1 rounded-full bg-[#3D2B1F] px-4 py-3 text-sm font-cormorant text-white transition disabled:opacity-50"
+              >
+                {mobileStep === 4 ? "Add to order" : "Next"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MAIN BUILDER */}
-      <div className="relative">
+      <div className="lg:flex lg:items-start">
 
         {/* STICKY PREVIEW */}
-        <div className="hidden lg:block sticky top-0 z-20" style={{ height: 0 }}>
-          <div
-            ref={stickyCardRef}
-            className="rounded-3xl p-8 flex flex-col items-center gap-6"
-            style={{ position: "absolute", top: "50vh", left: "23%", width: "clamp(240px, 38vw, 320px)", transform: "translate(-50%, -50%)", backgroundColor: "#FAF7F2", boxShadow: "0 8px 48px rgba(107,92,82,0.10)", border: "1.5px solid #E8DDD4", opacity: previewVisible ? 1 : 0, transition: "opacity 200ms ease", pointerEvents: previewVisible ? "auto" : "none" }}>
-
-            {/* Orbiting sparkle ring 1 — clockwise */}
-            <span aria-hidden="true" className="orbit-ring pointer-events-none absolute" style={{ inset: -24 }}>
-              {[
-                { top: "0%",   left: "50%",  color: "#F5C842", delay: "0s",    size: 7 },
-                { top: "25%",  left: "97%",  color: "#F2A7BE", delay: "0.6s",  size: 5 },
-                { top: "75%",  left: "97%",  color: "#D4AAFF", delay: "1.2s",  size: 6 },
-                { top: "100%", left: "50%",  color: "#F5C842", delay: "1.8s",  size: 5 },
-                { top: "75%",  left: "3%",   color: "#F9D49A", delay: "2.4s",  size: 7 },
-                { top: "25%",  left: "3%",   color: "#F2A7BE", delay: "3.0s",  size: 5 },
-              ].map((d, i) => (
-                <span key={i} className="orbit-dot absolute" style={{
-                  top: d.top, left: d.left,
-                  width: d.size, height: d.size,
-                  backgroundColor: d.color,
-                  boxShadow: `0 0 6px 2px ${d.color}99`,
-                  animationDelay: d.delay,
-                  transform: "translate(-50%, -50%)",
-                }} />
-              ))}
-            </span>
-
-            {/* Orbiting sparkle ring 2 — counter-clockwise, offset */}
-            <span aria-hidden="true" className="orbit-ring orbit-ring-rev pointer-events-none absolute" style={{ inset: -14 }}>
-              {[
-                { top: "15%",  left: "92%",  color: "#FFFBF0", delay: "0.3s",  size: 5 },
-                { top: "85%",  left: "92%",  color: "#F5C842", delay: "1.0s",  size: 4 },
-                { top: "85%",  left: "8%",   color: "#D4AAFF", delay: "1.7s",  size: 5 },
-                { top: "15%",  left: "8%",   color: "#F9D49A", delay: "2.5s",  size: 4 },
-                { top: "50%",  left: "100%", color: "#F2A7BE", delay: "0.8s",  size: 6 },
-                { top: "50%",  left: "0%",   color: "#F5C842", delay: "3.2s",  size: 5 },
-              ].map((d, i) => (
-                <span key={i} className="orbit-dot absolute" style={{
-                  top: d.top, left: d.left,
-                  width: d.size, height: d.size,
-                  backgroundColor: d.color,
-                  boxShadow: `0 0 5px 2px ${d.color}88`,
-                  animationDelay: d.delay,
-                  transform: "translate(-50%, -50%)",
-                }} />
-              ))}
-            </span>
-
-            <p className="font-eb-garamond text-sm opacity-50" style={{ color: "#7A4A6E" }}>your cupcake preview</p>
+        <div className="lg:w-[44%] lg:sticky lg:top-0 lg:h-screen flex flex-col items-center justify-center py-8 px-4 lg:px-8 order-first">
+          <div className="relative rounded-3xl p-8 flex flex-col items-center gap-6 w-full max-w-[320px] mx-auto"
+            style={{ backgroundColor: "#FAF7F2", boxShadow: "0 8px 48px rgba(107,92,82,0.10)", border: "1.5px solid #E8DDD4" }}>
+            <p className="font-caveat text-sm opacity-50 -mb-2" style={{ color: "#6B5C52" }}>your cupcake preview</p>
             <LivePreview build={build} />
             <div className="flex flex-wrap gap-1.5 justify-center">
-              {build.flavor && <Chip color="#F2C9A8">{FLAVOR_DISPLAY[build.flavor] ?? build.flavor}</Chip>}
-              {build.frosting && <Chip color="#C4AED8">{frostingLabel}</Chip>}
-              {build.topperChoice && <Chip color="#A8C8E8">{topperLabel}</Chip>}
+              {build.flavor && <Chip color="#F2C9A8">{build.flavor}</Chip>}
+              {build.frosting > 0 && <Chip color="#C4AED8">{FROSTING_OPTIONS.find(f => f.count === build.frosting)?.label}</Chip>}
+              {colorsSelected && (
+                <div className="flex gap-1">
+                  {build.selectedColors.map((cid) => {
+                    const c = [...PASTEL_PALETTE, ...BRIGHT_PALETTE].find((p) => p.id === cid);
+                    return c ? <span key={cid} className="w-4 h-4 rounded-full inline-block" style={{ backgroundColor: c.hex, border: "1px solid rgba(0,0,0,0.1)" }} title={c.label} /> : null;
+                  })}
+                </div>
+              )}
+              {build.glitter && <Chip color="#F0D898">{GLITTER_OPTIONS.find(g => g.id === build.glitter)?.label}</Chip>}
+              {build.topper && <Chip color="#A8C8E8">{topperLabel}</Chip>}
             </div>
             <StepProgress steps={STEP_COLORS} activeStep={Math.max(0, activeStep - 1)} completedSteps={completedSteps} onStepClick={(i) => scrollToStep(i + 1)} />
           </div>
         </div>
 
-          {/* Mobile-only: sticky mini preview bar */}
-          {!mobileModalOpen && (
-          <div
-            className="lg:hidden sticky top-[69px] z-30 px-4 py-3 flex items-center gap-4"
-            style={{ backgroundColor: "rgba(250,247,242,0.97)", borderBottom: "1px solid #E8DDD4", backdropFilter: "blur(8px)" }}
-          >
-            {/* Mini cupcake */}
-            <div className="flex-shrink-0">
-              <MiniPreview build={build} />
-            </div>
-            {/* Step chips */}
-            <div className="flex items-center gap-1 min-w-0 flex-1">
-              <MobileStepChip done={!!build.flavor} color="#F2C9A8" onClick={() => scrollToStep(1)}>
-                {(build.flavor && FLAVOR_DISPLAY[build.flavor]) || "Base"}
-              </MobileStepChip>
-              <span className="opacity-30 text-xs flex-shrink-0">›</span>
-              <MobileStepChip done={!!build.frosting} color="#C4AED8" onClick={() => scrollToStep(2)}>
-                {frostingLabel || "Frosting"}
-              </MobileStepChip>
-              <span className="opacity-30 text-xs flex-shrink-0">›</span>
-              <MobileStepChip done={!!build.topperChoice} color="#A8C8E8" onClick={() => scrollToStep(3)}>
-                {topperLabel || "Topper"}
-              </MobileStepChip>
-            </div>
-          </div>
-          )}
+        {/* STEPS */}
+        <div className="lg:w-[56%]">
 
           {/* STEP 1: BASE */}
           <section ref={(el) => { stepRefs.current[1] = el; }} className="relative min-h-screen flex items-center px-6 py-20 lg:py-32 overflow-hidden">
             <SectionWash color="#F2C9A8" />
-            <div className="relative z-10 w-full max-w-xl lg:ml-[46%]">
+            <div className="relative z-10 w-full max-w-xl">
               <StepPill number="01" label="Choose your base" color="#F2C9A8" />
-              <h2 className="font-eb-garamond italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#4A2545" }}>
+              <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>
                 What&apos;s the cake?
               </h2>
-              <p className="font-eb-garamond italic text-lg opacity-60 mb-10" style={{ color: "#7A4A6E" }}>Every great cupcake starts here.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5">
+              <p className="font-im-fell italic text-lg opacity-60 mb-10" style={{ color: "#6B5C52" }}>Every great cupcake starts here.</p>
+              <div className="grid grid-cols-2 gap-5">
                 {[
                   { id: "vanilla" as Flavor,   label: "Vanilla",   desc: "pale golden cake", img: "/cupcakes/base-vanilla.png" },
-                  { id: "chocolate" as Flavor, label: "Chocolate", desc: "rich dark cake",    img: "/cupcakes/base-choc.png" },
+                  { id: "chocolate" as Flavor, label: "Chocolate", desc: "rich dark cake",    img: "/cupcakes/base-choc.jpeg" },
                 ].map(({ id, label, desc, img }) => (
                   <WcSelectionCard key={id} selected={build.flavor === id} onClick={() => { set("flavor", id); setTimeout(() => scrollToStep(2), 400); }} accentColor="#F2C9A8">
-                    <div className="flex flex-col items-center w-full">
-                      <div className="relative w-32 h-32 flex-shrink-0">
-                        <Image src={img} alt={`${label} cupcake base`} fill sizes="128px" className="object-contain" />
-                      </div>
-                      <p className="font-eb-garamond text-xl mt-2 h-8 flex items-center justify-center" style={{ color: "#4A2545" }}>{label}</p>
-                      <p className="font-eb-garamond italic text-xs opacity-50 mt-1 min-h-[2.5rem]" style={{ color: "#7A4A6E" }}>{desc}</p>
-                    </div>
+                    <div className="relative w-32 h-32 mx-auto"><Image src={img} alt={`${label} cupcake base`} fill sizes="128px" className="object-contain" /></div>
+                    <p className="font-caveat text-xl mt-2" style={{ color: "#3D2B1F" }}>{label}</p>
+                    <p className="font-im-fell italic text-xs opacity-50 mt-1" style={{ color: "#6B5C52" }}>{desc}</p>
                   </WcSelectionCard>
                 ))}
-                <WcSelectionCard
-                  selected={build.flavor === "half-half"}
-                  onClick={() => { set("flavor", "half-half"); setTimeout(() => scrollToStep(2), 400); }}
-                  accentColor="#F2C9A8"
-                  className="col-span-2 sm:col-span-1"
-                >
-                  <div className="flex flex-col items-center w-full">
-                    <div className="relative w-32 h-32 flex-shrink-0">
-                      <Image src="/cupcakes/base-halfhalf.png" alt="Half and half cupcake base" fill sizes="128px" className="object-contain" />
-                    </div>
-                    <p className="font-eb-garamond text-xl mt-2 h-8 flex items-center justify-center" style={{ color: "#4A2545" }}>Half & Half</p>
-                    <p className="font-eb-garamond italic text-xs opacity-50 mt-1 min-h-[2.5rem]" style={{ color: "#7A4A6E" }}>half the batch vanilla, half chocolate</p>
-                  </div>
-                </WcSelectionCard>
               </div>
             </div>
           </section>
@@ -406,131 +595,145 @@ export default function WatercolorBuilder() {
           {/* STEP 2: FROSTING */}
           <section ref={(el) => { stepRefs.current[2] = el; }} className="relative min-h-screen flex items-start px-6 py-20 lg:py-32 overflow-hidden">
             <SectionWash color="#C4AED8" />
-            <div className="relative z-10 w-full max-w-xl lg:ml-[46%]">
+            <div className="relative z-10 w-full max-w-xl">
               <StepPill number="02" label="Choose your frosting" color="#C4AED8" />
-              <h2 className="font-eb-garamond italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#4A2545" }}>
+              <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>
                 Paint the frosting.
               </h2>
-              <p className="font-eb-garamond italic text-lg opacity-60 mb-10" style={{ color: "#7A4A6E" }}>How would you like your frosting?</p>
-              <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-8">
-                {FROSTING_OPTIONS.map(({ id, label, desc, img }) => (
-                  <WcSelectionCard key={id} selected={build.frosting === id} onClick={() => set("frosting", id)} accentColor="#C4AED8">
-                    <div className="relative w-16 h-16 sm:w-28 sm:h-28 mx-auto"><Image src={img} alt={label} fill sizes="(max-width: 640px) 64px, 112px" className="object-contain" /></div>
-                    <p className="font-eb-garamond text-sm mt-2" style={{ color: "#4A2545" }}>{label}</p>
-                    <p className="font-eb-garamond italic text-xs opacity-50 mt-0.5 hidden sm:block" style={{ color: "#7A4A6E" }}>{desc}</p>
+              <p className="font-im-fell italic text-lg opacity-60 mb-10" style={{ color: "#6B5C52" }}>How many dreamy swirl colours would you like?</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+                {FROSTING_OPTIONS.map(({ count, label, desc, img }) => (
+                  <WcSelectionCard key={count} selected={build.frosting === count} onClick={() => setFrosting(count)} accentColor="#C4AED8">
+                    <div className="relative w-28 h-28 mx-auto"><Image src={img} alt={label} fill sizes="112px" className="object-contain" /></div>
+                    <p className="font-caveat text-sm mt-2" style={{ color: "#3D2B1F" }}>{label}</p>
+                    <p className="font-im-fell italic text-xs opacity-50 mt-0.5" style={{ color: "#6B5C52" }}>{desc}</p>
                   </WcSelectionCard>
                 ))}
               </div>
-
-              {/* Rainbow info note */}
-              {build.frosting === "rainbow" && (
-                <div className="rounded-2xl px-5 py-4 mb-6 flex items-start gap-3"
-                  style={{ backgroundColor: "#F5F0E8", border: "1.5px solid #C4AED8" }}>
-                  <span className="text-lg mt-0.5">✦</span>
-                  <p className="font-eb-garamond text-sm leading-relaxed" style={{ color: "#7A4A6E" }}>
-                    Rainbow frosting is a meringue cookie sitting on classic buttercream — vanilla or chocolate to match your cake base. No color choices needed!
+              {build.frosting > 0 && (
+                <div className="rounded-3xl p-6 space-y-5" style={{ backgroundColor: "#FAF7F2", border: "1.5px solid #E8DDD4" }}>
+                  <p className="font-caveat text-lg" style={{ color: "#3D2B1F" }}>
+                    Now choose your {needed} colour{needed > 1 ? "s" : ""}
                   </p>
-                </div>
-              )}
-
-              {/* Color note textarea for 1-color and 3-color */}
-              {(build.frosting === "1-color" || build.frosting === "3-color") && (
-                <div className="rounded-3xl p-6 space-y-3 mb-6" style={{ backgroundColor: "#FAF7F2", border: "1.5px solid #E8DDD4" }}>
-                  <p className="font-eb-garamond text-lg" style={{ color: "#4A2545" }}>
-                    Tell Jo your color wishes <span className="opacity-40 text-sm">(optional)</span>
-                  </p>
-                  <textarea
-                    value={build.frostingColorNote}
-                    onChange={(e) => set("frostingColorNote", e.target.value)}
-                    placeholder={build.frosting === "1-color"
-                      ? "e.g. soft lavender, hot pink, classic white..."
-                      : "e.g. pink, purple and mint, or pastels to match a rainbow theme..."}
-                    rows={3}
-                    className="w-full rounded-xl px-4 py-3 font-eb-garamond resize-none outline-none transition-colors"
-                    style={{ border: "2px solid #E8DDD4", backgroundColor: "white", color: "#4A2545" }}
-                    onFocus={(e) => (e.target.style.borderColor = "#C4AED8")}
-                    onBlur={(e) => (e.target.style.borderColor = "#E8DDD4")}
-                  />
-                </div>
-              )}
-
-              {build.frosting && (
-                <div className="flex flex-col sm:flex-row gap-3 mt-2">
-                  <button
-                    onClick={scrollToSummary}
-                    className="btn-primary text-base px-8 py-3 w-full sm:w-auto justify-center"
-                  >
-                    ✦ Place my order →
-                  </button>
-                  <button
-                    onClick={() => scrollToStep(3)}
-                    className="font-eb-garamond text-base px-8 py-3 rounded-full border-2 w-full sm:w-auto text-center transition-colors"
-                    style={{ borderColor: "#C4AED8", color: "#7A4A6E" }}
-                  >
-                    + Add a topper
-                  </button>
+                  <div className="flex gap-3">
+                    {(["pastel", "bright"] as const).map((pt) => (
+                      <button key={pt} type="button"
+                        onClick={() => setBuild((p) => ({ ...p, paletteType: pt, selectedColors: [] }))}
+                        className="px-4 py-2 rounded-full font-caveat text-sm transition-all capitalize"
+                        style={{ backgroundColor: build.paletteType === pt ? "#C4AED8" : "#F5F0E8", border: build.paletteType === pt ? "2px solid #A088B8" : "2px solid #E8DDD4", color: "#3D2B1F" }}>
+                        {pt} palette
+                      </button>
+                    ))}
+                  </div>
+                  {build.paletteType && (
+                    <div className="flex gap-4 flex-wrap">
+                      {palette.map(({ id, label, hex }) => {
+                        const isSelected = build.selectedColors.includes(id);
+                        return (
+                          <button key={id} type="button" onClick={() => toggleColor(id)}
+                            className="flex flex-col items-center gap-1.5 transition-transform"
+                            style={{ transform: isSelected ? "scale(1.15)" : "scale(1)" }}
+                            aria-pressed={isSelected} aria-label={label}>
+                            <span className="w-10 h-10 rounded-full block" style={{ backgroundColor: hex, border: isSelected ? "3px solid #3D2B1F" : "2px solid #E8DDD4", boxShadow: isSelected ? "0 0 0 3px white, 0 0 0 5px #3D2B1F33" : "none" }} />
+                            <span className="font-caveat text-xs" style={{ color: "#6B5C52" }}>{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {build.paletteType && (
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-1.5">
+                        {Array.from({ length: needed }).map((_, i) => {
+                          const cid = build.selectedColors[i];
+                          const hex = cid ? [...PASTEL_PALETTE, ...BRIGHT_PALETTE].find((p) => p.id === cid)?.hex : null;
+                          return <span key={i} className="w-5 h-5 rounded-full inline-block transition-colors" style={{ backgroundColor: hex ?? "#E8DDD4", border: "1px solid rgba(0,0,0,0.08)" }} />;
+                        })}
+                      </div>
+                      <span className="font-caveat text-sm opacity-60" style={{ color: "#6B5C52" }}>{build.selectedColors.length} / {needed} chosen</span>
+                      {colorsSelected && (
+                        <button onClick={() => setTimeout(() => scrollToStep(3), 200)}
+                          className="ml-auto font-caveat text-sm px-5 py-2 rounded-full"
+                          style={{ backgroundColor: "#C4AED8", color: "#3D2B1F" }}>
+                          Next ↓
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </section>
 
-          <WashDivider color="#A8C8E8" />
+          <WashDivider color="#F0D898" />
 
-          {/* STEP 3: TOPPER (optional) */}
-          <section ref={(el) => { stepRefs.current[3] = el; }} className="relative min-h-screen flex items-start px-6 py-20 lg:py-32 overflow-hidden">
-            <SectionWash color="#A8C8E8" />
-            <CornerSplash corner="bottom-right" color="#E8A0B0" size={200} className="absolute bottom-0 right-0" />
-            <div className="relative z-10 w-full max-w-xl lg:ml-[46%]">
-              <StepPill number="03" label="Optional" color="#A8C8E8" />
-              <h2 className="font-eb-garamond italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#4A2545" }}>Add a topper.</h2>
-              <p className="font-eb-garamond italic text-lg opacity-60 mb-8" style={{ color: "#7A4A6E" }}>
-                Skip ahead if you&apos;re happy with the frosting — or pick a finishing touch.
-              </p>
-
-              {/* Three topper type cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                {([
-                  { id: "paper",  img: "/cupcakes/topper-fairy.png",    alt: "Paper topper example",  title: "Paper topper",  desc: "Lightweight printed designs", price: "+$0.50 per cupcake" },
-                  { id: "toy",    img: "/cupcakes/topper-dinosaur.png", alt: "Toy topper example",    title: "Toy topper",    desc: "Keepsake figurines",          price: "+$1.50 per cupcake" },
-                  { id: "custom", img: "/cupcakes/topper-unicorn.png",  alt: "Custom topper example", title: "Fully custom",  desc: "You imagine it, Jo makes it", price: "Jo will quote you"  },
-                ] as const).map(({ id, img, alt, title, desc, price }) => (
-                  <WcSelectionCard key={id} selected={build.topperChoice === id} onClick={() => set("topperChoice", id)} accentColor="#A8C8E8" className="flex flex-col">
-                    {/* Image area: flex-1 fills remaining space, centers the cropped artwork */}
-                    <div className="flex-1 flex items-center justify-center w-full py-3">
-                      <div className="relative overflow-hidden" style={{ width: "78%", aspectRatio: "1100 / 938" }}>
-                        <Image src={img} alt={alt} fill sizes="200px" className="object-cover object-top" />
-                      </div>
-                    </div>
-                    <p className="font-eb-garamond text-lg font-medium h-7 flex items-center justify-center" style={{ color: "#4A2545" }}>{title}</p>
-                    <p className="font-eb-garamond italic text-xs mt-1 min-h-[2rem]" style={{ color: "#7A4A6E", opacity: 0.7 }}>{desc}</p>
-                    <p className="font-eb-garamond text-sm mt-1" style={{ color: "#A8C8E8" }}>{price}</p>
+          {/* STEP 3: GLITTER */}
+          <section ref={(el) => { stepRefs.current[3] = el; }} className="relative min-h-screen flex items-center px-6 py-20 lg:py-32 overflow-hidden">
+            <SectionWash color="#F0D898" />
+            <div className="relative z-10 w-full max-w-xl">
+              <StepPill number="03" label="Choose your sparkle" color="#F0D898" />
+              <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>A little shimmer.</h2>
+              <p className="font-im-fell italic text-lg opacity-60 mb-10" style={{ color: "#6B5C52" }}>Every cupcake deserves some sparkle.</p>
+              <div className="grid grid-cols-3 gap-4">
+                {GLITTER_OPTIONS.map(({ id, label, desc, img }) => (
+                  <WcSelectionCard key={id} selected={build.glitter === id} onClick={() => { set("glitter", id); setTimeout(() => scrollToStep(4), 400); }} accentColor="#F0D898">
+                    <div className="relative w-24 h-24 mx-auto mb-1"><Image src={img} alt={label} fill sizes="96px" className="object-contain" /></div>
+                    <p className="font-caveat text-sm" style={{ color: "#3D2B1F" }}>{label}</p>
+                    <p className="font-im-fell italic text-xs opacity-50 mt-0.5" style={{ color: "#6B5C52" }}>{desc}</p>
                   </WcSelectionCard>
                 ))}
               </div>
+            </div>
+          </section>
 
-              {/* Custom topper: description + image upload */}
-              {build.topperChoice === "custom" && (
-                <div className="rounded-3xl p-6 space-y-5 mb-6" style={{ backgroundColor: "#FAF7F2", border: "1.5px solid #E8DDD4" }}>
-                  <p className="font-eb-garamond text-lg" style={{ color: "#4A2545" }}>Tell Jo what you&apos;d love ✦</p>
+          <WashDivider color="#A8C8E8" />
+
+          {/* STEP 4: TOPPER */}
+          <section ref={(el) => { stepRefs.current[4] = el; }} className="relative min-h-screen flex items-start px-6 py-20 lg:py-32 overflow-hidden">
+            <SectionWash color="#A8C8E8" />
+            <CornerSplash corner="bottom-right" color="#E8A0B0" size={200} className="absolute bottom-0 right-0" />
+            <div className="relative z-10 w-full max-w-xl">
+              <StepPill number="04" label="Choose your topper" color="#A8C8E8" />
+              <h2 className="font-cormorant italic font-medium leading-tight mb-3" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#3D2B1F" }}>The finishing touch.</h2>
+              <p className="font-im-fell italic text-lg opacity-60 mb-10" style={{ color: "#6B5C52" }}>
+                A toy or paper topper sits on top of your frosting. +${ADDON_TOPPER}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+                {TOPPER_OPTIONS.map(({ id, label, img }) => (
+                  <WcSelectionCard key={id} selected={build.topper === id} onClick={() => set("topper", id)} accentColor="#A8C8E8">
+                    {img ? (
+                      <div className="relative w-24 h-24 mx-auto mb-2"><Image src={img} alt={label} fill sizes="96px" className="object-contain" /></div>
+                    ) : (
+                      <div className="w-24 h-24 mx-auto mb-2 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#F5F0E8", border: "2px dashed #C4AED8" }}>
+                        <span className="text-3xl">✏️</span>
+                      </div>
+                    )}
+                    <p className="font-caveat text-base" style={{ color: "#3D2B1F" }}>{label}</p>
+                  </WcSelectionCard>
+                ))}
+              </div>
+              {build.topper === "custom" && (
+                <div className="rounded-3xl p-6 space-y-5" style={{ backgroundColor: "#FAF7F2", border: "1.5px solid #E8DDD4" }}>
+                  <p className="font-caveat text-lg" style={{ color: "#3D2B1F" }}>Tell Jo what you&apos;d love ✦</p>
                   <label className="block space-y-2">
-                    <span className="font-eb-garamond text-sm opacity-60" style={{ color: "#7A4A6E" }}>Describe your topper</span>
+                    <span className="font-caveat text-sm opacity-60" style={{ color: "#6B5C52" }}>Describe your topper</span>
                     <textarea value={build.customTopperDesc} onChange={(e) => set("customTopperDesc", e.target.value)}
                       placeholder="e.g. a little dinosaur in a birthday hat, a mermaid with purple hair..."
                       rows={3}
-                      className="w-full rounded-xl px-4 py-3 font-eb-garamond resize-none outline-none transition-colors"
-                      style={{ border: "2px solid #E8DDD4", backgroundColor: "white", color: "#4A2545" }}
+                      className="w-full rounded-xl px-4 py-3 font-im-fell italic resize-none outline-none transition-colors"
+                      style={{ border: "2px solid #E8DDD4", backgroundColor: "white", color: "#3D2B1F" }}
                       onFocus={(e) => (e.target.style.borderColor = "#C4AED8")}
                       onBlur={(e) => (e.target.style.borderColor = "#E8DDD4")} />
                   </label>
                   <label className="block space-y-2">
-                    <span className="font-eb-garamond text-sm opacity-60" style={{ color: "#7A4A6E" }}>Reference image (optional)</span>
+                    <span className="font-caveat text-sm opacity-60" style={{ color: "#6B5C52" }}>Reference image (optional)</span>
                     {customImagePreview ? (
                       <div className="relative inline-block">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={customImagePreview} alt="Topper reference" className="max-h-36 rounded-xl object-cover" style={{ border: "2px solid #E8DDD4" }} />
                         {customImageUploading && (
                           <div className="absolute inset-0 flex items-center justify-center rounded-xl" style={{ backgroundColor: "rgba(250,247,242,0.8)" }}>
-                            <span className="font-eb-garamond text-sm" style={{ color: "#D4788E" }}>Uploading…</span>
+                            <span className="font-caveat text-sm" style={{ color: "#D4788E" }}>Uploading…</span>
                           </div>
                         )}
                         {!customImageUploading && (
@@ -544,113 +747,92 @@ export default function WatercolorBuilder() {
                         className="w-full rounded-xl py-8 flex flex-col items-center gap-1.5"
                         style={{ border: "2px dashed #C4AED8", backgroundColor: "transparent" }}>
                         <span className="text-2xl opacity-50">🖼</span>
-                        <span className="font-eb-garamond text-sm" style={{ color: "#7A4A6E" }}>Click to upload a reference image</span>
-                        <span className="font-eb-garamond italic text-xs opacity-40" style={{ color: "#7A4A6E" }}>JPG, PNG · up to 10 MB</span>
+                        <span className="font-caveat text-sm" style={{ color: "#6B5C52" }}>Click to upload a reference image</span>
+                        <span className="font-im-fell italic text-xs opacity-40" style={{ color: "#6B5C52" }}>JPG, PNG · up to 10 MB</span>
                       </button>
                     )}
                     <input ref={customFileRef} type="file" accept="image/*" className="hidden" onChange={handleCustomImage} />
-                    {customImageError && <p className="font-eb-garamond italic text-sm" style={{ color: "#C0392B" }}>{customImageError}</p>}
+                    {customImageError && <p className="font-im-fell italic text-sm" style={{ color: "#C0392B" }}>{customImageError}</p>}
                   </label>
                 </div>
               )}
-
-              <button
-                onClick={scrollToSummary}
-                className="font-eb-garamond text-sm px-6 py-2.5 rounded-full transition-colors"
-                style={{ backgroundColor: build.topperChoice ? "#A8C8E8" : "#F0EBE4", color: "#4A2545" }}
-              >
-                {build.topperChoice ? "Continue →" : "Skip — no topper →"}
-              </button>
             </div>
           </section>
+        </div>
       </div>
 
       {/* SUMMARY */}
-      <section ref={(el) => { summaryRef.current = el; }} className="relative px-6 py-24 overflow-hidden" style={{ backgroundColor: "#F5F0E8", zIndex: 30 }}>
+      <section ref={summaryRef} className="relative px-6 py-24 overflow-hidden" style={{ backgroundColor: "#F5F0E8" }}>
         <SectionWash color="#E8A0B0" />
         <CornerSplash corner="top-left" color="#C4AED8" size={200} className="absolute top-0 left-0" />
         <CornerSplash corner="bottom-right" color="#F0D898" size={180} className="absolute bottom-0 right-0" />
         <div className="relative z-10 max-w-2xl mx-auto">
           <div className="text-center mb-12">
-            <p className="font-eb-garamond text-base opacity-50 mb-2" style={{ color: "#7A4A6E" }}>— almost done —</p>
-            <h2 className="font-eb-garamond italic font-medium" style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)", color: "#4A2545" }}>Your cupcake order</h2>
+            <p className="font-caveat text-base opacity-50 mb-2" style={{ color: "#6B5C52" }}>\u2014 almost done \u2014</p>
+            <h2 className="font-cormorant italic font-medium" style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)", color: "#3D2B1F" }}>Your cupcake order</h2>
           </div>
           <div className="rounded-3xl p-8 mb-8" style={{ backgroundColor: "#FAF7F2", boxShadow: "0 8px 48px rgba(107,92,82,0.10)", border: "1.5px solid #E8DDD4" }}>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-8 mb-8">
-              <div className="flex-shrink-0">
-                <LivePreview build={build} />
-              </div>
-              <div className="space-y-3">
-                {[
-                  { label: "Base",     value: (build.flavor && FLAVOR_DISPLAY[build.flavor]) || "—", color: "#F2C9A8", done: !!build.flavor, step: 1 },
-                  { label: "Frosting", value: frostingLabel || "—",           color: "#C4AED8", done: !!build.frosting, step: 2 },
-                  { label: "Topper",   value: topperLabel || "None", color: "#A8C8E8", done: true, step: 3 },
-                ].map(({ label, value, color, done, step }) => (
-                  <div key={label} className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: done ? color : "#E8DDD4" }} />
-                    <span className="font-eb-garamond text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#7A4A6E" }}>{label}</span>
-                    <span className="font-eb-garamond italic capitalize text-sm flex-1" style={{ color: done ? "#4A2545" : "#C0B8B0" }}>{value}</span>
-                    {!done && <button onClick={() => scrollToStep(step)} className="font-eb-garamond text-xs underline opacity-40 hover:opacity-70" style={{ color: "#7A4A6E" }}>choose ↑</button>}
-                  </div>
-                ))}
-                {build.frostingColorNote && (
-                  <div className="flex items-start gap-3 pt-1">
-                    <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ backgroundColor: "#C4AED8" }} />
-                    <span className="font-eb-garamond text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#7A4A6E" }}>Colors</span>
-                    <span className="font-eb-garamond italic text-sm flex-1" style={{ color: "#4A2545" }}>{build.frostingColorNote}</span>
-                  </div>
-                )}
-              </div>
+            <div className="space-y-3 mb-8">
+              {[
+                { label: "Base",     value: build.flavor || "\u2014",                                                                  color: "#F2C9A8", done: !!build.flavor,                       step: 1 },
+                { label: "Frosting", value: build.frosting ? (FROSTING_OPTIONS.find(f => f.count === build.frosting)?.label ?? "\u2014") : "\u2014", color: "#C4AED8", done: !!(build.frosting && colorsSelected), step: 2 },
+                { label: "Colours",  value: colorsSelected ? build.selectedColors.join(", ") : "\u2014",                               color: "#C4AED8", done: colorsSelected,                       step: 2 },
+                { label: "Sparkle",  value: build.glitter ? (GLITTER_OPTIONS.find(g => g.id === build.glitter)?.label ?? "\u2014") : "\u2014", color: "#F0D898", done: !!build.glitter,             step: 3 },
+                { label: "Topper",   value: build.topper ? topperLabel : "\u2014",                                                     color: "#A8C8E8", done: !!build.topper,                       step: 4 },
+              ].map(({ label, value, color, done, step }) => (
+                <div key={label} className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: done ? color : "#E8DDD4" }} />
+                  <span className="font-caveat text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#6B5C52" }}>{label}</span>
+                  <span className="font-im-fell italic capitalize text-sm flex-1" style={{ color: done ? "#3D2B1F" : "#C0B8B0" }}>{value}</span>
+                  {!done && <button onClick={() => scrollToStep(step)} className="font-caveat text-xs underline opacity-40 hover:opacity-70" style={{ color: "#6B5C52" }}>choose ↑</button>}
+                </div>
+              ))}
             </div>
             <div className="border-t pt-6" style={{ borderColor: "#E8DDD4" }}>
-              <p className="font-eb-garamond text-sm opacity-60 mb-4" style={{ color: "#7A4A6E" }}>How many cupcakes?</p>
+              <p className="font-caveat text-sm opacity-60 mb-4" style={{ color: "#6B5C52" }}>How many cupcakes?</p>
               <div className="grid grid-cols-3 gap-2">
                 {([6, 12, 18, 24, 36, 48] as Qty[]).map((q) => (
                   <button key={q} onClick={() => set("quantity", q)}
                     className="rounded-2xl py-3 flex flex-col items-center transition-all duration-200"
                     style={{ backgroundColor: build.quantity === q ? "#F2C9A8" : "#F5F0E8", border: build.quantity === q ? "2px solid #D4A870" : "2px solid transparent", boxShadow: build.quantity === q ? "0 4px 16px rgba(212,168,112,0.3)" : "none" }}>
-                    <span className="font-eb-garamond italic text-2xl font-medium" style={{ color: "#4A2545" }}>{q}</span>
-                    <span className="font-eb-garamond text-xs opacity-60" style={{ color: "#7A4A6E" }}>${priceForQty(q)}</span>
+                    <span className="font-cormorant italic text-2xl font-medium" style={{ color: "#3D2B1F" }}>{q}</span>
+                    <span className="font-caveat text-xs opacity-60" style={{ color: "#6B5C52" }}>${PRICES[q]}</span>
                   </button>
                 ))}
               </div>
             </div>
             <div className="border-t mt-6 pt-6 space-y-2" style={{ borderColor: "#E8DDD4" }}>
               <div className="flex justify-between">
-                <span className="font-eb-garamond italic opacity-60" style={{ color: "#7A4A6E" }}>{build.quantity} cupcakes</span>
-                <span className="font-eb-garamond italic text-lg" style={{ color: "#4A2545" }}>${basePrice}</span>
+                <span className="font-im-fell italic opacity-60" style={{ color: "#6B5C52" }}>{build.quantity} cupcakes</span>
+                <span className="font-cormorant italic text-lg" style={{ color: "#3D2B1F" }}>${basePrice}</span>
               </div>
-              {(build.topperChoice === "paper" || build.topperChoice === "toy") && (
+              {build.topper && (
                 <div className="flex justify-between">
-                  <span className="font-eb-garamond italic opacity-60" style={{ color: "#7A4A6E" }}>{topperLabel}</span>
-                  <span className="font-eb-garamond italic text-lg" style={{ color: "#4A2545" }}>+${topperAddon.toFixed(2).replace(".00", "")}</span>
-                </div>
-              )}
-              {build.topperChoice === "custom" && (
-                <div className="flex justify-between">
-                  <span className="font-eb-garamond italic opacity-60" style={{ color: "#7A4A6E" }}>Custom topper</span>
-                  <span className="font-eb-garamond italic text-sm" style={{ color: "#A8C8E8" }}>+ Jo will quote</span>
+                  <span className="font-im-fell italic opacity-60" style={{ color: "#6B5C52" }}>Topper</span>
+                  <span className="font-cormorant italic text-lg" style={{ color: "#3D2B1F" }}>+${ADDON_TOPPER}</span>
                 </div>
               )}
               <div className="flex justify-between border-t pt-3" style={{ borderColor: "#E8DDD4" }}>
-                <span className="font-eb-garamond text-lg font-bold" style={{ color: "#4A2545" }}>Total</span>
-                <span className="font-eb-garamond italic text-2xl font-medium" style={{ color: "#4A2545" }}>${total}</span>
+                <span className="font-caveat text-lg font-bold" style={{ color: "#3D2B1F" }}>Total</span>
+                <span className="font-cormorant italic text-2xl font-medium" style={{ color: "#3D2B1F" }}>${total}</span>
               </div>
-              <p className="font-eb-garamond italic text-xs opacity-40 text-right" style={{ color: "#7A4A6E" }}>+${ADDON_DELIVERY} delivery or free pickup</p>
+              <p className="font-im-fell italic text-xs opacity-40 text-right" style={{ color: "#6B5C52" }}>+${ADDON_DELIVERY} delivery (Austin ISD) or free pickup</p>
             </div>
           </div>
           <div className="text-center">
             {!isComplete ? (
               <div>
-                <p className="font-eb-garamond text-base opacity-50 mb-4" style={{ color: "#7A4A6E" }}>Finish all steps above to continue</p>
+                <p className="font-caveat text-base opacity-50 mb-4" style={{ color: "#6B5C52" }}>Finish all steps above to continue</p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   {[
-                    { label: "Base",     done: !!build.flavor,   step: 1 },
-                    { label: "Frosting", done: !!build.frosting, step: 2 },
+                    { label: "Base",     done: !!build.flavor,                          step: 1 },
+                    { label: "Frosting", done: !!(build.frosting && colorsSelected),    step: 2 },
+                    { label: "Sparkle",  done: !!build.glitter,                         step: 3 },
+                    { label: "Topper",   done: !!build.topper,                          step: 4 },
                   ].map(({ label, done, step }) => (
                     <button key={label} onClick={() => scrollToStep(step)}
-                      className="rounded-full px-4 py-1.5 font-eb-garamond text-sm transition-all"
-                      style={{ backgroundColor: done ? "#A8C8A833" : "#E8A0B033", border: done ? "1.5px solid #A8C8A8" : "1.5px solid #E8A0B0", color: "#4A2545" }}>
+                      className="rounded-full px-4 py-1.5 font-caveat text-sm transition-all"
+                      style={{ backgroundColor: done ? "#A8C8A833" : "#E8A0B033", border: done ? "1.5px solid #A8C8A8" : "1.5px solid #E8A0B0", color: "#3D2B1F" }}>
                       {done ? "✓" : "\u2192"} {label}
                     </button>
                   ))}
@@ -661,7 +843,7 @@ export default function WatercolorBuilder() {
                 <button onClick={handleStartOrder} disabled={submitting} className="btn-primary text-xl px-12 py-5 w-full sm:w-auto">
                   {submitting ? "Just a moment..." : "✦ Place my order →"}
                 </button>
-                <p className="font-eb-garamond italic text-sm opacity-40 mt-4" style={{ color: "#7A4A6E" }}>
+                <p className="font-im-fell italic text-sm opacity-40 mt-4" style={{ color: "#6B5C52" }}>
                   You&apos;ll fill in your contact details on the next page.
                 </p>
               </div>
@@ -669,486 +851,20 @@ export default function WatercolorBuilder() {
           </div>
         </div>
       </section>
-
-      {/* ── Mobile fullscreen builder modal ─────────────────────────────── */}
-      {mobileModalOpen && (
-        <div
-          className={`lg:hidden fixed inset-0 z-50 flex flex-col ${modalClosing ? "mobile-modal-close" : "mobile-modal-open"}`}
-          style={{ backgroundColor: "#FAF7F2" }}
-        >
-          {/* Sticky header */}
-          <div className="flex-shrink-0 px-5 pt-4 pb-3" style={{ borderBottom: "1px solid #E8DDD4" }}>
-            <div className="flex items-center justify-between mb-3">
-              <button
-                onClick={closeMobileModal}
-                className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-                style={{ backgroundColor: "#F0EBE4", color: "#7A4A6E", fontSize: 14 }}
-                aria-label="Close"
-              >✕</button>
-              <span className="font-eb-garamond italic text-sm" style={{ color: "#7A4A6E", opacity: 0.6 }}>
-                Step {mobileStep + 1} of 4
-              </span>
-              <div style={{ width: 32 }} />
-            </div>
-            <div className="w-full rounded-full" style={{ height: 4, backgroundColor: "#E8DDD4" }}>
-              <div
-                className="rounded-full transition-all duration-300"
-                style={{ height: 4, width: `${((mobileStep + 1) / 4) * 100}%`, backgroundColor: "#D4788E" }}
-              />
-            </div>
-          </div>
-
-          {/* Scrollable step content — key forces remount + fade on step change */}
-          <div key={mobileStep} className="flex-1 overflow-y-auto px-5 py-6 modal-step-enter">
-
-            {/* Step 0: Base */}
-            {mobileStep === 0 && (
-              <div className="space-y-3">
-                <div className="mb-6">
-                  <h2 className="font-eb-garamond italic font-medium text-3xl leading-tight" style={{ color: "#4A2545" }}>
-                    What&apos;s the cake?
-                  </h2>
-                  <p className="font-eb-garamond italic text-sm opacity-60 mt-1" style={{ color: "#7A4A6E" }}>
-                    Every great cupcake starts here.
-                  </p>
-                </div>
-                {([
-                  { id: "vanilla"   as Flavor, label: "Vanilla",     desc: "pale golden cake",             img: "/cupcakes/base-vanilla.png"  },
-                  { id: "chocolate" as Flavor, label: "Chocolate",   desc: "rich dark cake",               img: "/cupcakes/base-choc.png"     },
-                  { id: "half-half" as Flavor, label: "Half & Half", desc: "half vanilla, half chocolate", img: "/cupcakes/base-halfhalf.png" },
-                ] as const).map(({ id, label, desc, img }) => {
-                  const sel = build.flavor === id;
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => { set("flavor", id); setTimeout(() => setMobileStep(1), 280); }}
-                      className="w-full flex items-center gap-4 rounded-2xl p-4 text-left transition-all relative"
-                      style={{
-                        backgroundColor: sel ? "#FDF5EE" : "white",
-                        border: `2px solid ${sel ? "#D4788E" : "#E8DDD4"}`,
-                        boxShadow: sel ? "0 2px 12px rgba(212,120,142,0.15)" : "none",
-                      }}
-                    >
-                      {sel && (
-                        <span className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-white"
-                          style={{ backgroundColor: "#D4788E", fontSize: 10 }}>✓</span>
-                      )}
-                      <div className="flex-shrink-0 rounded-full flex items-center justify-center overflow-hidden"
-                        style={{ width: 72, height: 72, backgroundColor: "#F5F0E8" }}>
-                        <div className="relative" style={{ width: 56, height: 56 }}>
-                          <Image src={img} alt={label} fill sizes="56px" className="object-contain" />
-                        </div>
-                      </div>
-                      <div>
-                        <p className="font-eb-garamond text-xl" style={{ color: "#4A2545" }}>{label}</p>
-                        <p className="font-eb-garamond italic text-sm opacity-50" style={{ color: "#7A4A6E" }}>{desc}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Step 1: Frosting */}
-            {mobileStep === 1 && (
-              <div className="space-y-3">
-                <div className="mb-6">
-                  <h2 className="font-eb-garamond italic font-medium text-3xl leading-tight" style={{ color: "#4A2545" }}>
-                    Paint the frosting.
-                  </h2>
-                  <p className="font-eb-garamond italic text-sm opacity-60 mt-1" style={{ color: "#7A4A6E" }}>
-                    How would you like your frosting?
-                  </p>
-                </div>
-                {FROSTING_OPTIONS.map(({ id, label, desc, img }) => {
-                  const sel = build.frosting === id;
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => set("frosting", id)}
-                      className="w-full flex items-center gap-4 rounded-2xl p-4 text-left transition-all relative"
-                      style={{
-                        backgroundColor: sel ? "#FAF4FD" : "white",
-                        border: `2px solid ${sel ? "#D4788E" : "#E8DDD4"}`,
-                        boxShadow: sel ? "0 2px 12px rgba(196,174,216,0.2)" : "none",
-                      }}
-                    >
-                      {sel && (
-                        <span className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-white"
-                          style={{ backgroundColor: "#D4788E", fontSize: 10 }}>✓</span>
-                      )}
-                      <div className="flex-shrink-0 rounded-full flex items-center justify-center overflow-hidden"
-                        style={{ width: 72, height: 72, backgroundColor: "#F5F0E8" }}>
-                        <div className="relative" style={{ width: 56, height: 56 }}>
-                          <Image src={img} alt={label} fill sizes="56px" className="object-contain" />
-                        </div>
-                      </div>
-                      <div>
-                        <p className="font-eb-garamond text-xl" style={{ color: "#4A2545" }}>{label}</p>
-                        <p className="font-eb-garamond italic text-sm opacity-50" style={{ color: "#7A4A6E" }}>{desc}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-                {build.frosting === "rainbow" && (
-                  <div className="rounded-2xl px-5 py-4 flex items-start gap-3 mt-1"
-                    style={{ backgroundColor: "#F5F0E8", border: "1.5px solid #C4AED8" }}>
-                    <span className="text-lg mt-0.5">✦</span>
-                    <p className="font-eb-garamond text-sm leading-relaxed" style={{ color: "#7A4A6E" }}>
-                      Rainbow frosting is a meringue cookie sitting on classic buttercream — vanilla or chocolate to match your cake base. No color choices needed!
-                    </p>
-                  </div>
-                )}
-                {(build.frosting === "1-color" || build.frosting === "3-color") && (
-                  <div className="rounded-3xl p-5 space-y-3 mt-1" style={{ backgroundColor: "#F5F0E8", border: "1.5px solid #E8DDD4" }}>
-                    <p className="font-eb-garamond text-base" style={{ color: "#4A2545" }}>
-                      Tell Jo your color wishes <span className="opacity-40 text-sm">(optional)</span>
-                    </p>
-                    <textarea
-                      value={build.frostingColorNote}
-                      onChange={(e) => set("frostingColorNote", e.target.value)}
-                      placeholder={build.frosting === "1-color"
-                        ? "e.g. soft lavender, hot pink, classic white..."
-                        : "e.g. pink, purple and mint, or pastels..."}
-                      rows={3}
-                      className="w-full rounded-xl px-4 py-3 font-eb-garamond resize-none outline-none transition-colors"
-                      style={{ border: "2px solid #E8DDD4", backgroundColor: "white", color: "#4A2545" }}
-                      onFocus={(e) => (e.target.style.borderColor = "#C4AED8")}
-                      onBlur={(e) => (e.target.style.borderColor = "#E8DDD4")}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Step 2: Topper (optional) */}
-            {mobileStep === 2 && (
-              <div className="space-y-3">
-                <div className="mb-5">
-                  <div className="flex items-baseline gap-2">
-                    <h2 className="font-eb-garamond italic font-medium text-3xl leading-tight" style={{ color: "#4A2545" }}>
-                      Add a topper.
-                    </h2>
-                    <span className="font-eb-garamond italic text-sm opacity-50" style={{ color: "#7A4A6E" }}>optional</span>
-                  </div>
-                  <p className="font-eb-garamond italic text-sm opacity-60 mt-1" style={{ color: "#7A4A6E" }}>
-                    Skip ahead if you&apos;re happy with the frosting.
-                  </p>
-                </div>
-                {([
-                  { id: "paper"  as TopperChoice, img: "/cupcakes/topper-fairy.png",    alt: "Paper topper",  title: "Paper topper", desc: "Lightweight printed designs", price: "+$0.50 per cupcake" },
-                  { id: "toy"    as TopperChoice, img: "/cupcakes/topper-dinosaur.png", alt: "Toy topper",    title: "Toy topper",   desc: "Keepsake figurines",          price: "+$1.50 per cupcake" },
-                  { id: "custom" as TopperChoice, img: "/cupcakes/topper-unicorn.png",  alt: "Custom topper", title: "Fully custom", desc: "You imagine it, Jo makes it", price: "Jo will quote you"  },
-                ] as const).map(({ id, img, alt, title, desc, price }) => {
-                  const sel = build.topperChoice === id;
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => set("topperChoice", id)}
-                      className="w-full flex items-center gap-4 rounded-2xl p-4 text-left transition-all relative"
-                      style={{
-                        backgroundColor: sel ? "#EFF8FD" : "white",
-                        border: `2px solid ${sel ? "#D4788E" : "#E8DDD4"}`,
-                        boxShadow: sel ? "0 2px 12px rgba(168,200,232,0.2)" : "none",
-                      }}
-                    >
-                      {sel && (
-                        <span className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-white"
-                          style={{ backgroundColor: "#D4788E", fontSize: 10 }}>✓</span>
-                      )}
-                      <div className="flex-shrink-0 rounded-full flex items-center justify-center overflow-hidden"
-                        style={{ width: 72, height: 72, backgroundColor: "#F5F0E8" }}>
-                        <div className="relative" style={{ width: 56, height: 56 }}>
-                          <Image src={img} alt={alt} fill sizes="56px" className="object-contain object-top" />
-                        </div>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-eb-garamond text-xl" style={{ color: "#4A2545" }}>{title}</p>
-                        <p className="font-eb-garamond italic text-sm opacity-50" style={{ color: "#7A4A6E" }}>{desc}</p>
-                        <p className="font-eb-garamond text-xs mt-0.5" style={{ color: "#A8C8E8" }}>{price}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-                {build.topperChoice === "custom" && (
-                  <div className="rounded-3xl p-5 space-y-4 mt-1" style={{ backgroundColor: "#F5F0E8", border: "1.5px solid #E8DDD4" }}>
-                    <p className="font-eb-garamond text-base" style={{ color: "#4A2545" }}>Tell Jo what you&apos;d love ✦</p>
-                    <label className="block space-y-2">
-                      <span className="font-eb-garamond text-sm opacity-60" style={{ color: "#7A4A6E" }}>Describe your topper</span>
-                      <textarea
-                        value={build.customTopperDesc}
-                        onChange={(e) => set("customTopperDesc", e.target.value)}
-                        placeholder="e.g. a little dinosaur in a birthday hat..."
-                        rows={3}
-                        className="w-full rounded-xl px-4 py-3 font-eb-garamond resize-none outline-none transition-colors"
-                        style={{ border: "2px solid #E8DDD4", backgroundColor: "white", color: "#4A2545" }}
-                        onFocus={(e) => (e.target.style.borderColor = "#C4AED8")}
-                        onBlur={(e) => (e.target.style.borderColor = "#E8DDD4")}
-                      />
-                    </label>
-                    <label className="block space-y-2">
-                      <span className="font-eb-garamond text-sm opacity-60" style={{ color: "#7A4A6E" }}>Reference image (optional)</span>
-                      {customImagePreview ? (
-                        <div className="relative inline-block">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={customImagePreview} alt="Topper reference" className="max-h-36 rounded-xl object-cover" style={{ border: "2px solid #E8DDD4" }} />
-                          {customImageUploading && (
-                            <div className="absolute inset-0 flex items-center justify-center rounded-xl" style={{ backgroundColor: "rgba(250,247,242,0.8)" }}>
-                              <span className="font-eb-garamond text-sm" style={{ color: "#D4788E" }}>Uploading…</span>
-                            </div>
-                          )}
-                          {!customImageUploading && (
-                            <button type="button"
-                              onClick={() => { setCustomImagePreview(null); set("customTopperImageUrl", null); if (customFileRef.current) customFileRef.current.value = ""; }}
-                              className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                              style={{ backgroundColor: "#D4788E", color: "white" }}>✕</button>
-                          )}
-                        </div>
-                      ) : (
-                        <button type="button" onClick={() => customFileRef.current?.click()}
-                          className="w-full rounded-xl py-6 flex flex-col items-center gap-1.5"
-                          style={{ border: "2px dashed #C4AED8", backgroundColor: "transparent" }}>
-                          <span className="text-2xl opacity-50">🖼</span>
-                          <span className="font-eb-garamond text-sm" style={{ color: "#7A4A6E" }}>Click to upload a reference image</span>
-                          <span className="font-eb-garamond italic text-xs opacity-40" style={{ color: "#7A4A6E" }}>JPG, PNG · up to 10 MB</span>
-                        </button>
-                      )}
-                      <input ref={customFileRef} type="file" accept="image/*" className="hidden" onChange={handleCustomImage} />
-                      {customImageError && <p className="font-eb-garamond italic text-sm" style={{ color: "#C0392B" }}>{customImageError}</p>}
-                    </label>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Step 3: Summary */}
-            {mobileStep === 3 && (
-              <div>
-                <div className="mb-6 text-center">
-                  <h2 className="font-eb-garamond italic font-medium text-3xl leading-tight" style={{ color: "#4A2545" }}>Your order</h2>
-                  <p className="font-eb-garamond italic text-sm opacity-60 mt-1" style={{ color: "#7A4A6E" }}>Almost done!</p>
-                </div>
-                <div className="flex justify-center mb-6">
-                  <LivePreview build={build} width={120} />
-                </div>
-                <div className="rounded-2xl p-5 mb-4 space-y-3" style={{ backgroundColor: "white", border: "1.5px solid #E8DDD4" }}>
-                  {[
-                    { label: "Base",     value: (build.flavor && FLAVOR_DISPLAY[build.flavor]) || "—", done: !!build.flavor },
-                    { label: "Frosting", value: frostingLabel || "—",                                   done: !!build.frosting },
-                    { label: "Topper",   value: topperLabel || "None",                                   done: true },
-                  ].map(({ label, value, done }) => (
-                    <div key={label} className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: done ? "#D4788E" : "#E8DDD4" }} />
-                      <span className="font-eb-garamond text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#7A4A6E" }}>{label}</span>
-                      <span className="font-eb-garamond italic capitalize text-sm flex-1" style={{ color: done ? "#4A2545" : "#C0B8B0" }}>{value}</span>
-                    </div>
-                  ))}
-                  {build.frostingColorNote && (
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ backgroundColor: "#C4AED8" }} />
-                      <span className="font-eb-garamond text-sm opacity-50 w-16 flex-shrink-0" style={{ color: "#7A4A6E" }}>Colors</span>
-                      <span className="font-eb-garamond italic text-sm flex-1" style={{ color: "#4A2545" }}>{build.frostingColorNote}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="mb-4">
-                  <p className="font-eb-garamond text-sm opacity-60 mb-3" style={{ color: "#7A4A6E" }}>How many cupcakes?</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {([6, 12, 18, 24, 36, 48] as Qty[]).map((q) => (
-                      <button key={q} onClick={() => set("quantity", q)}
-                        className="rounded-2xl py-3 flex flex-col items-center transition-all duration-200"
-                        style={{
-                          backgroundColor: build.quantity === q ? "#F2C9A8" : "#F5F0E8",
-                          border: build.quantity === q ? "2px solid #D4A870" : "2px solid transparent",
-                          boxShadow: build.quantity === q ? "0 4px 16px rgba(212,168,112,0.3)" : "none",
-                        }}>
-                        <span className="font-eb-garamond italic text-2xl font-medium" style={{ color: "#4A2545" }}>{q}</span>
-                        <span className="font-eb-garamond text-xs opacity-60" style={{ color: "#7A4A6E" }}>${priceForQty(q)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="rounded-2xl p-5" style={{ backgroundColor: "white", border: "1.5px solid #E8DDD4" }}>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="font-eb-garamond italic opacity-60" style={{ color: "#7A4A6E" }}>{build.quantity} cupcakes</span>
-                      <span className="font-eb-garamond italic text-lg" style={{ color: "#4A2545" }}>${basePrice}</span>
-                    </div>
-                    {(build.topperChoice === "paper" || build.topperChoice === "toy") && (
-                      <div className="flex justify-between">
-                        <span className="font-eb-garamond italic opacity-60" style={{ color: "#7A4A6E" }}>{topperLabel}</span>
-                        <span className="font-eb-garamond italic text-lg" style={{ color: "#4A2545" }}>+${topperAddon.toFixed(2).replace(".00", "")}</span>
-                      </div>
-                    )}
-                    {build.topperChoice === "custom" && (
-                      <div className="flex justify-between">
-                        <span className="font-eb-garamond italic opacity-60" style={{ color: "#7A4A6E" }}>Custom topper</span>
-                        <span className="font-eb-garamond italic text-sm" style={{ color: "#A8C8E8" }}>+ Jo will quote</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between border-t pt-3 mt-2" style={{ borderColor: "#E8DDD4" }}>
-                      <span className="font-eb-garamond text-lg font-bold" style={{ color: "#4A2545" }}>Total</span>
-                      <span className="font-eb-garamond italic text-2xl font-medium" style={{ color: "#4A2545" }}>${total}</span>
-                    </div>
-                    <p className="font-eb-garamond italic text-xs opacity-40 text-right" style={{ color: "#7A4A6E" }}>+${ADDON_DELIVERY} delivery or free pickup</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-          </div>
-
-          {/* Sticky footer */}
-          <div className="flex-shrink-0 px-5 py-4 flex items-center gap-3"
-            style={{ borderTop: "1px solid #E8DDD4", backgroundColor: "#FAF7F2" }}>
-            <button
-              onClick={mobileBack}
-              className="font-eb-garamond text-base px-5 py-3 rounded-full flex-shrink-0 transition-colors"
-              style={{ backgroundColor: "#F0EBE4", color: "#7A4A6E" }}
-            >
-              {mobileStep === 0 ? "✕ Close" : "← Back"}
-            </button>
-            <button
-              onClick={mobileNext}
-              disabled={(mobileStep === 0 && !build.flavor) || (mobileStep === 1 && !build.frosting) || (mobileStep === 3 && !isComplete)}
-              className="flex-1 font-eb-garamond text-base px-5 py-3 rounded-full text-center transition-all disabled:opacity-40"
-              style={{ backgroundColor: "#D4788E", color: "white" }}
-            >
-              {mobileStep === 3
-                ? "✦ Place my order →"
-                : mobileStep === 2 && !build.topperChoice
-                ? "Skip →"
-                : "Next →"}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-function LivePreview({ build, width = 140 }: { build: BuildState; width?: number }) {
-  const [layerUrls, setLayerUrls] = useState<Record<string, string>>({});
+function LivePreview({ build }: { build: BuildState }) {
+  const frostingImg = build.frosting ? FROSTING_OPTIONS.find((f) => f.count === build.frosting)?.img : null;
+  const baseImg = build.flavor === "chocolate" ? "/cupcakes/base-choc.jpeg" : build.flavor === "vanilla" ? "/cupcakes/base-vanilla.png" : null;
+  const glitterImg = build.glitter ? GLITTER_OPTIONS.find((g) => g.id === build.glitter)?.img : null;
+  const topperImg = build.topper && build.topper !== "custom" ? TOPPER_OPTIONS.find((t) => t.id === build.topper)?.img : null;
 
-  const frostFile =
-    build.frosting === "1-color" ? "swirl-single.png" :
-    build.frosting === "3-color" ? "swirl-triple.png" :
-    build.frosting === "rainbow" ? "swirl-rainbow.png" :
-    null;
-
-  const topFile =
-    build.topperChoice === "paper"  ? "topper-fairy.png" :
-    build.topperChoice === "toy"    ? "topper-dinosaur.png" :
-    build.topperChoice === "custom" ? "topper-unicorn.png" :
-    null;
-
-  useEffect(() => {
-    const srcs: [string, string][] = [];
-    if (build.flavor === "vanilla")   srcs.push(["base-vanilla.png",   "/cupcakes/base-vanilla.png"]);
-    if (build.flavor === "chocolate") srcs.push(["base-choc.png",       "/cupcakes/base-choc.png"]);
-    if (build.flavor === "half-half") srcs.push(["base-halfhalf.png",   "/cupcakes/base-halfhalf.png"]);
-    const ff =
-      build.frosting === "1-color" ? "swirl-single.png" :
-      build.frosting === "3-color" ? "swirl-triple.png" :
-      build.frosting === "rainbow" ? "swirl-rainbow.png" : null;
-    if (ff) srcs.push([ff, `/cupcakes/${ff}`]);
-    const tf =
-      build.topperChoice === "paper"  ? "topper-fairy.png" :
-      build.topperChoice === "toy"    ? "topper-dinosaur.png" :
-      build.topperChoice === "custom" ? "topper-unicorn.png" : null;
-    if (tf) srcs.push([tf, `/cupcakes/${tf}`]);
-
-    const needed = new Set(srcs.map(([f]) => f));
-    setLayerUrls(prev => {
-      const next = { ...prev };
-      Object.keys(next).forEach(k => { if (!needed.has(k)) delete next[k]; });
-      return next;
-    });
-
-    let alive = true;
-    srcs.forEach(([file, src]) => {
-      stripBlackBg(src).then(url => {
-        if (alive) setLayerUrls(prev => ({ ...prev, [file]: url }));
-      }).catch(() => {});
-    });
-    return () => { alive = false; };
-  }, [build.flavor, build.frosting, build.topperChoice]);
-
-  // ── Empty state ──────────────────────────────────────────────────────
-  if (!build.flavor) {
-    return (
-      <div
-        className="rounded-2xl flex items-center justify-center"
-        style={{ width, height: Math.round(width * 0.8), backgroundColor: "#F5F0E8" }}
-      >
-        <span className="font-eb-garamond text-sm opacity-40" style={{ color: "#7A4A6E" }}>choose a base ↓</span>
-      </div>
-    );
-  }
-
-  const H = Math.round(width * (1875 / 1100) * 100) / 100;
-  const layer: CSSProperties = { position: "absolute", bottom: 0, left: 0, width, height: H, userSelect: "none" };
-  const baseFile =
-    build.flavor === "chocolate" ? "base-choc.png" :
-    build.flavor === "half-half" ? "base-halfhalf.png" :
-    "base-vanilla.png";
-
-  return (
-    <div style={{ position: "relative", width, height: H, flexShrink: 0 }}>
-
-      {/* Base */}
-      {layerUrls[baseFile] && (
-        <Image
-          src={layerUrls[baseFile]}
-          alt="cupcake base"
-          width={width}
-          height={H}
-          style={layer}
-          unoptimized
-          draggable={false}
-        />
-      )}
-
-      {/* Frosting */}
-      {frostFile && layerUrls[frostFile] && (
-        <Image
-          src={layerUrls[frostFile]}
-          alt="frosting"
-          width={width}
-          height={H}
-          style={layer}
-          unoptimized
-          draggable={false}
-        />
-      )}
-
-      {/* Topper */}
-      {topFile && layerUrls[topFile] && (
-        <Image
-          src={layerUrls[topFile]}
-          alt="topper"
-          width={width}
-          height={H}
-          style={layer}
-          unoptimized
-          draggable={false}
-        />
-      )}
-    </div>
-  );
-}
-
-function MiniPreview({ build }: { build: BuildState }) {
-  const baseImg =
-    build.flavor === "chocolate" ? "/cupcakes/base-choc.png" :
-    build.flavor === "half-half" ? "/cupcakes/base-halfhalf.png" :
-    build.flavor === "vanilla"   ? "/cupcakes/base-vanilla.png" :
-    null;
-  const frostingImg = build.frosting ? FROSTING_OPTIONS.find((f) => f.id === build.frosting)?.img : null;
   if (!baseImg) {
     return (
-      <div className="w-40 h-48 mx-auto rounded-xl flex items-center justify-center" style={{ backgroundColor: "#F5F0E8" }}>
-        <span className="text-lg opacity-30">🧁</span>
+      <div className="w-40 h-40 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#F5F0E8" }}>
+        <span className="font-caveat text-sm opacity-40" style={{ color: "#6B5C52" }}>choose a base ↓</span>
       </div>
     );
   }
@@ -1156,43 +872,34 @@ function MiniPreview({ build }: { build: BuildState }) {
   return (
     <div className="relative w-40 h-48 mx-auto">
       <div className="absolute inset-x-2 bottom-0 h-28">
-        <Image src={baseImg} alt="cupcake base" fill sizes="160px" className="object-contain object-bottom" />
+        <Image src={baseImg} alt="cake base" fill sizes="160px" className="object-contain object-bottom" />
       </div>
       {frostingImg && (
-        <div className="absolute inset-x-2 bottom-0 h-28">
+        <div className="absolute inset-x-0 top-8 h-28">
           <Image src={frostingImg} alt="frosting" fill sizes="160px" className="object-contain object-bottom" />
         </div>
       )}
-      {build.topperChoice && (
-        <div className="absolute inset-x-2 bottom-0 h-28">
-          <Image src={TOPPER_IMAGES[build.topperChoice]} alt="topper" fill sizes="160px" className="object-contain object-bottom" />
+      {glitterImg && (
+        <div className="absolute bottom-1 right-0 w-10 h-10 opacity-80">
+          <Image src={glitterImg} alt="sparkle" fill sizes="40px" className="object-contain" />
         </div>
+      )}
+      {topperImg && (
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-16 h-16">
+          <Image src={topperImg} alt="topper" fill sizes="64px" className="object-contain" />
+        </div>
+      )}
+      {build.topper === "custom" && (
+        <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-2xl">✏️</div>
       )}
     </div>
   );
 }
 
-function MobileStepChip({ children, done, color, onClick }: { children: React.ReactNode; done: boolean; color: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex-1 min-w-0 font-eb-garamond text-xs px-2 py-1 rounded-full capitalize transition-all truncate text-center"
-      style={{
-        backgroundColor: done ? color + "66" : "#F0EBE4",
-        border: `1.5px solid ${done ? color : "#D8D0C8"}`,
-        color: "#4A2545",
-      }}
-    >
-      {done ? "✓ " : ""}{children}
-    </button>
-  );
-}
-
 function Chip({ children, color }: { children: React.ReactNode; color: string }) {
   return (
-    <span className="font-eb-garamond text-xs px-2.5 py-1 rounded-full capitalize"
-      style={{ backgroundColor: color + "44", border: `1px solid ${color}88`, color: "#4A2545" }}>
+    <span className="font-caveat text-xs px-2.5 py-1 rounded-full capitalize"
+      style={{ backgroundColor: color + "44", border: `1px solid ${color}88`, color: "#3D2B1F" }}>
       {children}
     </span>
   );
