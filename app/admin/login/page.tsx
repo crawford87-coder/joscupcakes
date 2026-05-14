@@ -6,21 +6,38 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Sparkle } from "@/components/Decorative";
 
+type Mode = "password" | "magic-link";
+
 export default function AdminLoginPage() {
+  const [mode, setMode] = useState<Mode>("password");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
 
-  async function handleSendLink(e: React.FormEvent) {
+  async function handlePasswordLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) {
+      setError("Incorrect email or password.");
+      setLoading(false);
+      return;
+    }
+    window.location.href = "/admin";
+  }
+
+  async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        shouldCreateUser: true,
+        shouldCreateUser: false,
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -31,6 +48,12 @@ export default function AdminLoginPage() {
     }
     setSent(true);
     setLoading(false);
+  }
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError("");
+    setSent(false);
   }
 
   return (
@@ -46,7 +69,53 @@ export default function AdminLoginPage() {
           </p>
         </div>
 
-        {sent ? (
+        {mode === "password" ? (
+          <form onSubmit={handlePasswordLogin} className="space-y-4">
+            <label className="block space-y-1.5">
+              <span className="font-im-fell-sc text-plum text-sm">Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+                className="w-full rounded-xl border-2 border-border-pink px-4 py-2.5 font-im-fell italic text-plum bg-white outline-none focus:border-rose"
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="font-im-fell-sc text-plum text-sm">Password</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full rounded-xl border-2 border-border-pink px-4 py-2.5 font-im-fell italic text-plum bg-white outline-none focus:border-rose"
+              />
+            </label>
+
+            {error && (
+              <p className="font-im-fell italic text-red-600 text-sm text-center">{error}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? "Signing in…" : "Sign in →"}
+            </button>
+
+            <p className="text-center">
+              <button
+                type="button"
+                onClick={() => switchMode("magic-link")}
+                className="font-im-fell italic text-plum/50 text-sm hover:text-plum/80 transition-colors"
+              >
+                Send a magic link instead
+              </button>
+            </p>
+          </form>
+        ) : sent ? (
           <div className="text-center space-y-3">
             <p className="text-3xl">✉️</p>
             <p className="font-im-fell italic text-plum text-base">
@@ -57,14 +126,14 @@ export default function AdminLoginPage() {
             </p>
             <button
               type="button"
-              onClick={() => { setSent(false); setEmail(""); }}
+              onClick={() => { setSent(false); switchMode("password"); }}
               className="font-im-fell italic text-plum/50 text-sm hover:text-plum/80 transition-colors"
             >
-              ← Use a different email
+              ← Back to sign in
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSendLink} className="space-y-4">
+          <form onSubmit={handleMagicLink} className="space-y-4">
             <p className="font-im-fell italic text-plum/70 text-sm text-center">
               Enter your email and we&apos;ll send you a sign-in link.
             </p>
@@ -91,6 +160,16 @@ export default function AdminLoginPage() {
             >
               {loading ? "Sending…" : "Send sign-in link →"}
             </button>
+
+            <p className="text-center">
+              <button
+                type="button"
+                onClick={() => switchMode("password")}
+                className="font-im-fell italic text-plum/50 text-sm hover:text-plum/80 transition-colors"
+              >
+                ← Sign in with password
+              </button>
+            </p>
           </form>
         )}
       </div>
