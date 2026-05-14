@@ -270,7 +270,7 @@ export default function WatercolorBuilder() {
       </section>
 
       {/* MAIN BUILDER */}
-      <div className="relative">
+      <div className="relative pb-20 lg:pb-0">
 
         {/* STICKY PREVIEW */}
         <div className="hidden lg:block sticky top-0 z-20" style={{ height: 0 }}>
@@ -332,11 +332,11 @@ export default function WatercolorBuilder() {
           </div>
         </div>
 
-          {/* Mobile-only: sticky mini preview bar */}
+          {/* Mobile-only: fixed mini preview bar at bottom */}
           {!mobileModalOpen && (
           <div
-            className="lg:hidden sticky top-[69px] z-30 px-4 py-3 flex items-center gap-4"
-            style={{ backgroundColor: "rgba(250,247,242,0.97)", borderBottom: "1px solid #E8DDD4", backdropFilter: "blur(8px)" }}
+            className="lg:hidden fixed bottom-0 left-0 right-0 z-30 px-4 py-3 flex items-center gap-4"
+            style={{ backgroundColor: "rgba(250,247,242,0.97)", borderTop: "1px solid #E8DDD4", backdropFilter: "blur(8px)" }}
           >
             {/* Mini cupcake */}
             <div className="flex-shrink-0">
