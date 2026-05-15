@@ -6,7 +6,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Sparkle } from "@/components/Decorative";
 
-type Mode = "password" | "magic-link";
+type Mode = "password" | "magic-link" | "forgot";
 
 export default function AdminLoginPage() {
   const [mode, setMode] = useState<Mode>("password");
@@ -48,6 +48,18 @@ export default function AdminLoginPage() {
     }
     setSent(true);
     setLoading(false);
+  }
+
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/update-password`,
+    });
+    setLoading(false);
+    if (resetError) { setError("Could not send reset email. Check the address and try again."); return; }
+    setSent(true);
   }
 
   function switchMode(next: Mode) {
@@ -105,13 +117,68 @@ export default function AdminLoginPage() {
               {loading ? "Signing in…" : "Sign in →"}
             </button>
 
-            <p className="text-center">
+            <div className="flex justify-between">
+              <button
+                type="button"
+                onClick={() => switchMode("forgot")}
+                className="font-im-fell italic text-plum/50 text-sm hover:text-plum/80 transition-colors"
+              >
+                Forgot password?
+              </button>
               <button
                 type="button"
                 onClick={() => switchMode("magic-link")}
                 className="font-im-fell italic text-plum/50 text-sm hover:text-plum/80 transition-colors"
               >
-                Send a magic link instead
+                Magic link instead
+              </button>
+            </div>
+          </form>
+        ) : mode === "forgot" && sent ? (
+          <div className="text-center space-y-3">
+            <p className="text-3xl">✉️</p>
+            <p className="font-im-fell italic text-plum text-base">
+              Check <strong>{email}</strong> for a password reset link.
+            </p>
+            <button
+              type="button"
+              onClick={() => { setSent(false); switchMode("password"); }}
+              className="font-im-fell italic text-plum/50 text-sm hover:text-plum/80 transition-colors"
+            >
+              ← Back to sign in
+            </button>
+          </div>
+        ) : mode === "forgot" ? (
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <p className="font-im-fell italic text-plum/70 text-sm text-center">
+              Enter your email and we&apos;ll send you a reset link.
+            </p>
+            <label className="block space-y-1.5">
+              <span className="font-im-fell-sc text-plum text-sm">Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+                className="w-full rounded-xl border-2 border-border-pink px-4 py-2.5 font-im-fell italic text-plum bg-white outline-none focus:border-rose"
+              />
+            </label>
+            {error && <p className="font-im-fell italic text-red-600 text-sm text-center">{error}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? "Sending…" : "Send reset link →"}
+            </button>
+            <p className="text-center">
+              <button
+                type="button"
+                onClick={() => switchMode("password")}
+                className="font-im-fell italic text-plum/50 text-sm hover:text-plum/80 transition-colors"
+              >
+                ← Back to sign in
               </button>
             </p>
           </form>
