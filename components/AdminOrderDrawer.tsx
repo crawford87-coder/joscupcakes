@@ -21,6 +21,7 @@ export interface DrawerOrder {
   total_price: number;
   pickup_time: string | null;
   status: string;
+  delivery_photo_url?: string | null;
 }
 
 interface GmailMessage {
@@ -95,7 +96,10 @@ export default function AdminOrderDrawer({
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [sendingPayment, setSendingPayment] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(initialOrder.delivery_photo_url ?? null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const threadEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync if parent updates the order
   useEffect(() => { setOrder(initialOrder); }, [initialOrder]);
@@ -184,6 +188,21 @@ export default function AdminOrderDrawer({
     setSendingPayment(false);
   }
 
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    const formData = new FormData();
+    formData.append("photo", file);
+    const res = await fetch(`/api/admin/orders/${order.id}/photo`, { method: "POST", body: formData });
+    if (res.ok) {
+      const { url } = await res.json();
+      setPhotoUrl(url);
+    }
+    setUploadingPhoto(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   const firstName = order.customer_name.split(" ")[0];
   const pickupFormatted = new Date(order.pickup_date + "T12:00:00").toLocaleDateString(
     "en-US",
@@ -196,12 +215,16 @@ export default function AdminOrderDrawer({
       text: `Hi ${firstName},\n\nThanks so much for reaching out — I'd love to make your cupcakes!\n\nHere's my quote:\n\n${order.quantity} ${order.flavor} cupcakes — $${order.total_price}\nPickup: ${pickupFormatted}${order.pickup_time ? ` around ${order.pickup_time}` : ""}\n\nLet me know if you'd like to go ahead and I'll send over a payment link.\n\nWarm regards,\nJo`,
     },
     {
-      label: "Confirm pickup",
+      label: "Send payment request",
+      text: `Hi ${firstName},\n\nGreat news — I'm popping a payment link over to you now. Once that's done your order is confirmed!\n\nOrder summary:\n${order.quantity} ${order.flavor} cupcakes — $${order.total_price}\nPickup: ${pickupFormatted}${order.pickup_time ? ` around ${order.pickup_time}` : ""}\n\nLet me know if you have any questions.\n\nWarm regards,\nJo`,
+    },
+    {
+      label: "Confirm pickup time",
       text: `Hi ${firstName},\n\nJust confirming your pickup for ${pickupFormatted}${order.pickup_time ? ` around ${order.pickup_time}` : ""}.\n\nI'll have your ${order.quantity} cupcakes ready and waiting — looking forward to seeing you!\n\nWarm regards,\nJo`,
     },
     {
-      label: "Balance reminder",
-      text: `Hi ${firstName},\n\nJust a friendly reminder that the remaining balance for your order (${order.reference_number}) will be due soon.\n\nIf you'd like me to resend the payment link, just let me know!\n\nThanks so much,\nJo`,
+      label: "Send balance reminder",
+      text: `Hi ${firstName},\n\nJust a friendly reminder that the remaining balance for your order (${order.reference_number}) will be due soon.\n\nI'll send the payment link through shortly — please don't hesitate to reach out if you have any questions!\n\nThanks so much,\nJo`,
     },
   ];
 
@@ -307,12 +330,51 @@ export default function AdminOrderDrawer({
               <p className="font-im-fell-sc text-plum/35 text-xs uppercase tracking-widest mb-2">
                 Delivery photo
               </p>
-              <div
-                className="h-28 rounded-xl flex items-center justify-center"
-                style={{ border: "2px dashed #E8DDD4" }}
-              >
-                <p className="font-im-fell italic text-plum/25 text-sm">No photo yet</p>
-              </div>
+              {photoUrl ? (
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photoUrl}
+                    alt="Delivery"
+                    className="w-full rounded-xl object-cover max-h-52"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute top-2 right-2 font-im-fell-sc text-xs px-2.5 py-1 rounded-lg transition-colors"
+                    style={{ backgroundColor: "rgba(253,250,247,0.9)", color: "#7A4A6E" }}
+                  >
+                    Replace
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="w-full h-28 rounded-xl flex flex-col items-center justify-center gap-2 transition-colors"
+                  style={{ border: "2px dashed #E8DDD4" }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.borderColor = "#C8B0A8")}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.borderColor = "#E8DDD4")}
+                >
+                  {uploadingPhoto ? (
+                    <p className="font-im-fell italic text-plum/30 text-sm">Uploading…</p>
+                  ) : (
+                    <>
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ color: "#C8B0A8" }}>
+                        <path d="M10 13V5m0 0L7 8m3-3l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                      <p className="font-im-fell italic text-plum/25 text-sm">Add delivery photo</p>
+                    </>
+                  )}
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoUpload}
+              />
             </div>
           )}
 
@@ -327,7 +389,7 @@ export default function AdminOrderDrawer({
                 {sendingPayment ? "Sending…" : paymentButtonLabel}
               </button>
             )}
-            {order.status === "confirmed" && (
+            {["confirmed", "in_progress", "ready"].includes(order.status) && (
               <button
                 onClick={() => patchStatus("delivered")}
                 className="font-im-fell-sc text-xs px-3.5 py-1.5 rounded-pill border-2 border-mint/60 text-teal-700 bg-mint/20 hover:bg-mint/40 transition-colors"
