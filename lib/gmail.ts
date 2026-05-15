@@ -20,6 +20,7 @@ export interface SendEmailParams {
   threadId?: string;
   inReplyTo?: string;
   references?: string;
+  from?: string;
 }
 
 // ─── Token management ─────────────────────────────────────────────────────
@@ -136,7 +137,8 @@ function stripHtml(html: string): string {
 
 export async function getThread(
   accessToken: string,
-  threadId: string
+  threadId: string,
+  joEmail?: string
 ): Promise<GmailMessage[]> {
   const res = await fetch(
     `${GMAIL_API}/users/me/threads/${threadId}?format=full`,
@@ -145,7 +147,8 @@ export async function getThread(
   if (!res.ok) throw new Error("Failed to fetch Gmail thread");
 
   const data = await res.json();
-  const joEmail = (process.env.GMAIL_USER ?? "").toLowerCase();
+  // Fall back to env var if not passed, but prefer the DB-stored email
+  const senderEmail = (joEmail ?? process.env.GMAIL_USER ?? "").toLowerCase();
 
   return (data.messages ?? []).map(
     (msg: {
@@ -163,7 +166,7 @@ export async function getThread(
         subject: getHeader(headers, "Subject"),
         date: getHeader(headers, "Date"),
         body: msg.payload ? extractBody(msg.payload) : msg.snippet,
-        isFromJo: from.toLowerCase().includes(joEmail),
+        isFromJo: from.toLowerCase().includes(senderEmail),
       };
     }
   );
@@ -191,7 +194,7 @@ export async function sendEmail(
   accessToken: string,
   params: SendEmailParams
 ): Promise<{ threadId: string; messageId: string }> {
-  const from = process.env.GMAIL_USER!;
+  const from = params.from ?? process.env.GMAIL_USER ?? "";
 
   const headerLines = [
     `From: ${from}`,

@@ -12,15 +12,23 @@ export async function GET(req: NextRequest) {
   const orderId = req.nextUrl.searchParams.get("orderId");
   if (!orderId) return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
 
-  const { data: order } = await supabase
-    .from("orders")
-    .select("id, reference_number, customer_email, gmail_thread_id")
-    .eq("id", orderId)
-    .single();
+  const [{ data: order }, { data: creds }] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("id, reference_number, customer_email, gmail_thread_id")
+      .eq("id", orderId)
+      .single(),
+    supabase
+      .from("gmail_credentials")
+      .select("email")
+      .eq("id", 1)
+      .single(),
+  ]);
 
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
   let threadId = (order.gmail_thread_id as string | null) ?? null;
+  const joEmail = (creds?.email as string | null) ?? undefined;
 
   let accessToken: string;
   try {
@@ -49,7 +57,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const messages = await getThread(accessToken, threadId);
+    const messages = await getThread(accessToken, threadId, joEmail);
     return NextResponse.json({ messages, threadId });
   } catch (err) {
     console.error("Gmail thread fetch error:", err);

@@ -24,8 +24,15 @@ export async function POST(req: NextRequest) {
   }
 
   let accessToken: string;
+  let fromEmail: string | undefined;
   try {
     accessToken = await getAccessToken();
+    const { data: creds } = await supabase
+      .from("gmail_credentials")
+      .select("email")
+      .eq("id", 1)
+      .single();
+    fromEmail = (creds?.email as string | undefined) ?? undefined;
   } catch {
     return NextResponse.json({ error: "Gmail not connected" }, { status: 503 });
   }
@@ -37,6 +44,7 @@ export async function POST(req: NextRequest) {
     threadId,
     inReplyTo,
     references,
+    from: fromEmail,
   });
 
   // Store thread ID back to order on first send
