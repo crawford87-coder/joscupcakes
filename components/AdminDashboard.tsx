@@ -3,9 +3,11 @@
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import AdminOrderDrawer, { DrawerOrder } from "@/components/AdminOrderDrawer";
 
 type Status =
   | "new"
+  | "quoting"
   | "awaiting_payment"
   | "confirmed"
   | "in_progress"
@@ -35,90 +37,101 @@ interface Order {
   status: Status;
 }
 
-const STATUS_LABELS: Record<Status, string> = {
-  new: "New",
-  awaiting_payment: "Awaiting Payment",
-  confirmed: "Confirmed",
-  in_progress: "In Progress",
-  ready: "Ready",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
-};
+// ── Bucket config ────────────────────────────────────────────────────────────
 
-const STATUS_COLORS: Record<Status, string> = {
-  new: "bg-butter/40 text-amber-800 border-butter",
-  awaiting_payment: "bg-orange-100 text-orange-800 border-orange-200",
-  confirmed: "bg-mint/40 text-teal-800 border-mint",
-  in_progress: "bg-lavender/40 text-purple-800 border-lavender",
-  ready: "bg-green-100 text-green-800 border-green-200",
-  delivered: "bg-gray-100 text-gray-600 border-gray-200",
-  cancelled: "bg-red-50 text-red-600 border-red-200",
-};
+interface Bucket {
+  label: string;
+  statuses: Status[];
+  accentBg: string;
+  accentBorder: string;
+  accentText: string;
+  badgeBg: string;
+  defaultOpen: boolean;
+}
+
+const BUCKETS: Bucket[] = [
+  {
+    label: "New",
+    statuses: ["new"],
+    accentBg: "#EEF5FF",
+    accentBorder: "#BAD4F7",
+    accentText: "#1A4473",
+    badgeBg: "#BAD4F7",
+    defaultOpen: true,
+  },
+  {
+    label: "Quoting",
+    statuses: ["quoting"],
+    accentBg: "#F2EEFF",
+    accentBorder: "#C8B8F0",
+    accentText: "#42227A",
+    badgeBg: "#C8B8F0",
+    defaultOpen: true,
+  },
+  {
+    label: "Awaiting payment",
+    statuses: ["awaiting_payment"],
+    accentBg: "#FFFBEE",
+    accentBorder: "#EDD898",
+    accentText: "#6B4800",
+    badgeBg: "#EDD898",
+    defaultOpen: true,
+  },
+  {
+    label: "Confirmed",
+    statuses: ["confirmed", "in_progress", "ready"],
+    accentBg: "#EDFAF3",
+    accentBorder: "#9ED8B4",
+    accentText: "#1A5C3A",
+    badgeBg: "#9ED8B4",
+    defaultOpen: false,
+  },
+  {
+    label: "Delivered",
+    statuses: ["delivered"],
+    accentBg: "#F3F3F3",
+    accentBorder: "#CACACA",
+    accentText: "#484848",
+    badgeBg: "#CACACA",
+    defaultOpen: false,
+  },
+];
+
+
+function formatPickup(dateStr: string) {
+  return new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+// ── Main component ───────────────────────────────────────────────────────────
 
 export default function AdminDashboard({ orders: initialOrders }: { orders: Order[] }) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [openBuckets, setOpenBuckets] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(BUCKETS.map((b) => [b.label, b.defaultOpen]))
+  );
+  const [drawerOrder, setDrawerOrder] = useState<Order | null>(null);
+  const [sendingPayment, setSendingPayment] = useState<Record<string, boolean>>({});
   const router = useRouter();
   const supabase = createClient();
 
-  // This-week stats
-  const thisWeek = useMemo(() => {
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay());
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-
-    return orders.filter((o) => {
-      if (o.status === "cancelled") return false;
-      const d = new Date(o.pickup_date);
-      return d >= weekStart && d <= weekEnd;
-    });
-  }, [orders]);
-
-  const thisWeekCupcakes = thisWeek.reduce((sum, o) => sum + o.quantity, 0);
-
-  // Filtered orders
-  const filtered = useMemo(() => {
-    return orders.filter((o) => {
-      if (statusFilter !== "all" && o.status !== statusFilter) return false;
-      if (dateFrom && o.pickup_date < dateFrom) return false;
-      if (dateTo && o.pickup_date > dateTo) return false;
-      return true;
-    });
-  }, [orders, statusFilter, dateFrom, dateTo]);
-
-  async function updateStatus(id: string, status: Status) {
-    const res = await fetch(`/api/orders/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    if (res.ok) {
-      setOrders((prev) =>
-        prev.map((o) => (o.id === id ? { ...o, status } : o))
-      );
-    }
+  function toggleBucket(label: string) {
+    setOpenBuckets((prev) => ({ ...prev, [label]: !prev[label] }));
   }
 
-  const [sendingPayment, setSendingPayment] = useState<Record<string, boolean>>({});
-  const [paymentSent, setPaymentSent] = useState<Record<string, boolean>>({});
+  function handleStatusChange(id: string, status: string) {
+    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: status as Status } : o)));
+    if (drawerOrder?.id === id) setDrawerOrder((o) => o ? { ...o, status: status as Status } : o);
+  }
 
-  async function sendPaymentRequest(id: string) {
+  async function sendPaymentRequest(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
     setSendingPayment((p) => ({ ...p, [id]: true }));
-    const res = await fetch(`/api/admin/orders/${id}/payment-link`, {
-      method: "POST",
-    });
+    const res = await fetch(`/api/admin/orders/${id}/payment-link`, { method: "POST" });
     setSendingPayment((p) => ({ ...p, [id]: false }));
-    if (res.ok) {
-      setPaymentSent((p) => ({ ...p, [id]: true }));
-      setOrders((prev) =>
-        prev.map((o) => (o.id === id ? { ...o, status: "awaiting_payment" } : o))
-      );
-    }
+    if (res.ok) handleStatusChange(id, "awaiting_payment");
   }
 
   async function handleSignOut() {
@@ -126,341 +139,218 @@ export default function AdminDashboard({ orders: initialOrders }: { orders: Orde
     router.push("/admin/login");
   }
 
+  // Cancelled orders (shown separately, collapsed)
+  const cancelledOrders = useMemo(() => orders.filter((o) => o.status === "cancelled"), [orders]);
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-cormorant italic text-berry text-4xl font-medium">
-            Orders
-          </h1>
-          <p className="font-im-fell italic text-plum/60 text-sm mt-1">
-            Jo&apos;s Cupcakes — Admin Hub
+          <h1 className="font-cormorant italic text-berry text-4xl font-medium">Orders</h1>
+          <p className="font-sans text-sm mt-1" style={{ color: "#8C7B74" }}>
+            Jo&apos;s Cupcakes
           </p>
         </div>
         <button
           onClick={handleSignOut}
-          className="font-im-fell-sc text-plum/60 text-sm hover:text-rose transition-colors"
+          className="font-sans text-sm transition-colors"
+          style={{ color: "#A08880" }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "#D4788E")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "#A08880")}
         >
           Sign out
         </button>
       </div>
 
-      {/* This week */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="card text-center">
-          <p className="font-im-fell-sc text-plum/50 text-xs uppercase tracking-widest mb-1">
-            This week — orders
-          </p>
-          <p className="font-cormorant italic text-berry text-5xl font-medium">
-            {thisWeek.length}
-          </p>
-        </div>
-        <div className="card text-center">
-          <p className="font-im-fell-sc text-plum/50 text-xs uppercase tracking-widest mb-1">
-            This week — cupcakes to bake
-          </p>
-          <p className="font-cormorant italic text-berry text-5xl font-medium">
-            {thisWeekCupcakes}
-          </p>
-        </div>
-      </div>
+      {/* Buckets */}
+      <div className="space-y-3">
+        {BUCKETS.map((bucket) => {
+          const bucketOrders = orders.filter((o) => bucket.statuses.includes(o.status as Status));
+          const isOpen = openBuckets[bucket.label];
 
-      {/* Filters */}
-      <div className="card mb-6 flex flex-wrap gap-4 items-end">
-        <div className="flex flex-wrap gap-2">
-          {(["all", "new", "confirmed", "in_progress", "ready", "delivered", "cancelled"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`font-im-fell-sc text-xs px-3 py-1.5 rounded-pill border-2 transition-colors capitalize ${
-                statusFilter === s
-                  ? "border-rose bg-rose text-white"
-                  : "border-border-pink text-plum hover:border-rose-light"
-              }`}
+          return (
+            <div
+              key={bucket.label}
+              className="rounded-2xl overflow-hidden"
+              style={{ border: `1.5px solid ${bucket.accentBorder}` }}
             >
-              {s === "all" ? "All" : STATUS_LABELS[s as Status]}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-im-fell-sc text-plum text-xs">From</span>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="rounded-lg border-2 border-border-pink px-3 py-1.5 text-sm text-plum font-im-fell italic outline-none focus:border-rose"
-          />
-          <span className="font-im-fell-sc text-plum text-xs">To</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="rounded-lg border-2 border-border-pink px-3 py-1.5 text-sm text-plum font-im-fell italic outline-none focus:border-rose"
-          />
-        </div>
-      </div>
-
-      {/* Orders — desktop table */}
-      <div className="hidden md:block card overflow-x-auto p-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b-2 border-border-pink">
-              {["Ref #", "Customer", "Pickup Date", "Qty", "Total", "Status", "Actions"].map(
-                (h) => (
-                  <th
-                    key={h}
-                    className="font-im-fell-sc text-plum/60 text-xs tracking-widest text-left px-4 py-3 uppercase"
+              {/* Bucket header */}
+              <button
+                onClick={() => toggleBucket(bucket.label)}
+                className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors"
+                style={{ backgroundColor: isOpen ? bucket.accentBg : "#FDFAF7" }}
+              >
+                <div className="flex items-center gap-3">
+                  {/* Chevron */}
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    className="flex-shrink-0 transition-transform duration-200"
+                    style={{
+                      transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                      color: bucket.accentText,
+                    }}
                   >
-                    {h}
-                  </th>
-                )
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={7} className="font-im-fell italic text-plum/50 text-center py-12">
-                  No orders found.
-                </td>
-              </tr>
-            )}
-            {filtered.map((order) => (
-              <React.Fragment key={order.id}>
-                <tr
-                  onClick={() =>
-                    setExpandedId(expandedId === order.id ? null : order.id)
-                  }
-                  className="border-b border-border-pink hover:bg-pink-soft/10 cursor-pointer transition-colors"
-                >
-                  <td className="px-4 py-3 font-im-fell-sc text-plum text-xs">
-                    {order.reference_number}
-                  </td>
-                  <td className="px-4 py-3 font-im-fell italic text-plum">
-                    {order.customer_name}
-                  </td>
-                  <td className="px-4 py-3 font-im-fell italic text-plum">
-                    {new Date(order.pickup_date + "T12:00:00").toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </td>
-                  <td className="px-4 py-3 font-cormorant text-berry text-lg font-medium">
-                    {order.quantity}
-                  </td>
-                  <td className="px-4 py-3 font-cormorant text-berry text-lg font-medium">
-                    ${order.total_price}
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={order.status}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        updateStatus(order.id, e.target.value as Status);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      className={`font-im-fell-sc text-xs px-2 py-1 rounded-lg border-2 outline-none cursor-pointer ${
-                        STATUS_COLORS[order.status]
-                      }`}
-                    >
-                      {Object.entries(STATUS_LABELS).map(([val, label]) => (
-                        <option key={val} value={val}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-4 py-3">
-                    {order.status === "new" && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          sendPaymentRequest(order.id);
-                        }}
-                        disabled={sendingPayment[order.id]}
-                        className="font-im-fell-sc text-xs px-3 py-1.5 rounded-pill bg-rose/20 text-rose border-2 border-rose/40 hover:bg-rose/30 transition-colors disabled:opacity-60"
-                      >
-                        {sendingPayment[order.id] ? "Sending…" : paymentSent[order.id] ? "✓ Sent" : "Send Payment Request"}
-                      </button>
-                    )}
-                    {order.status === "awaiting_payment" && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          sendPaymentRequest(order.id);
-                        }}
-                        disabled={sendingPayment[order.id]}
-                        className="font-im-fell-sc text-xs px-3 py-1.5 rounded-pill bg-orange-100 text-orange-800 border-2 border-orange-200 hover:bg-orange-200 transition-colors disabled:opacity-60"
-                      >
-                        {sendingPayment[order.id] ? "Sending…" : "Resend Link"}
-                      </button>
-                    )}
-                  </td>
-                </tr>
+                    <path d="M4 2L8 6L4 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="font-cormorant italic font-medium text-xl" style={{ color: bucket.accentText }}>
+                    {bucket.label}
+                  </span>
+                  {/* Count badge */}
+                  <span
+                    className="font-sans text-xs px-2 py-0.5 rounded-full font-medium"
+                    style={{ backgroundColor: bucket.badgeBg, color: bucket.accentText }}
+                  >
+                    {bucketOrders.length}
+                  </span>
+                </div>
+                {!isOpen && bucketOrders.length > 0 && (
+                  <span className="font-sans text-xs hidden sm:block" style={{ color: bucket.accentText, opacity: 0.6 }}>
+                    {bucketOrders.map((o) => o.customer_name.split(" ")[0]).slice(0, 3).join(", ")}
+                    {bucketOrders.length > 3 ? ` +${bucketOrders.length - 3}` : ""}
+                  </span>
+                )}
+              </button>
 
-                {/* Expanded row */}
-                {expandedId === order.id && (
-                  <tr key={`${order.id}-detail`} className="bg-pink-soft/5">
-                    <td colSpan={7} className="px-6 py-5">
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Detail label="Email" value={order.customer_email} />
-                          <Detail label="Phone" value={order.customer_phone} />
-                          <Detail label="Flavor" value={order.flavor} />
-                          <Detail
-                            label="Icing colors"
-                            value={order.icing_colors?.join(", ") || "—"}
-                          />
-                          <Detail
-                            label="Topper"
-                            value={
-                              order.topper
-                                ? order.topper_description ?? "Yes"
-                                : "No"
-                            }
-                          />
-                          <Detail
-                            label="Extras"
-                            value={order.sprinkles_or_glitter ?? "None"}
-                          />
+              {/* Bucket rows */}
+              {isOpen && (
+                <div style={{ backgroundColor: "#FDFAF7" }}>
+                  {bucketOrders.length === 0 ? (
+                    <p className="font-sans text-sm px-5 py-4" style={{ color: "#B0A09A" }}>
+                      No orders here.
+                    </p>
+                  ) : (
+                    bucketOrders.map((order, i) => (
+                      <div
+                        key={order.id}
+                        onClick={() => setDrawerOrder(order)}
+                        className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors group"
+                        style={{
+                          borderTop: i > 0 ? "1px solid #EDE8E3" : `1px solid ${bucket.accentBorder}`,
+                        }}
+                        onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.backgroundColor = "#FAF7F2")}
+                        onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.backgroundColor = "")}
+                      >
+                        {/* Customer */}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-cormorant italic text-lg leading-tight truncate" style={{ color: "#3D2B1F" }}>
+                            {order.customer_name}
+                          </p>
+                          <p className="font-sans text-xs mt-0.5" style={{ color: "#A08880" }}>
+                            {order.reference_number}
+                          </p>
                         </div>
-                        <div className="space-y-2">
-                          <Detail label="Fulfillment" value={order.fulfillment_type} />
-                          {order.pickup_time && (
-                            <Detail label="Preferred time" value={order.pickup_time} />
+
+                        {/* Pickup */}
+                        <div className="hidden sm:block text-right flex-shrink-0 w-16">
+                          <p className="font-sans text-sm" style={{ color: "#5C4A3D" }}>
+                            {formatPickup(order.pickup_date)}
+                          </p>
+                        </div>
+
+                        {/* Qty + flavor */}
+                        <div className="hidden md:block text-right flex-shrink-0 w-28">
+                          <p className="font-sans text-sm capitalize" style={{ color: "#5C4A3D" }}>
+                            {order.quantity} · {order.flavor}
+                          </p>
+                        </div>
+
+                        {/* Total */}
+                        <div className="flex-shrink-0 w-14 text-right">
+                          <p className="font-cormorant italic text-lg font-medium" style={{ color: "#3D2B1F" }}>
+                            ${order.total_price}
+                          </p>
+                        </div>
+
+                        {/* Quick action */}
+                        <div className="flex-shrink-0 w-36 flex justify-end">
+                          {(order.status === "new" || order.status === "quoting") && (
+                            <button
+                              onClick={(e) => sendPaymentRequest(e, order.id)}
+                              disabled={sendingPayment[order.id]}
+                              className="font-sans text-xs px-3 py-1.5 rounded-full border transition-colors disabled:opacity-50"
+                              style={{ borderColor: "#D4788E", color: "#D4788E", backgroundColor: "transparent" }}
+                              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FEF0F4"; }}
+                              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+                            >
+                              {sendingPayment[order.id] ? "Sending…" : "Send payment link"}
+                            </button>
                           )}
-                          {order.delivery_address && (
-                            <Detail label="Address" value={order.delivery_address} />
+                          {order.status === "awaiting_payment" && (
+                            <button
+                              onClick={(e) => sendPaymentRequest(e, order.id)}
+                              disabled={sendingPayment[order.id]}
+                              className="font-sans text-xs px-3 py-1.5 rounded-full border transition-colors disabled:opacity-50"
+                              style={{ borderColor: "#EDD898", color: "#6B4800", backgroundColor: "transparent" }}
+                              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FFFBEE"; }}
+                              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+                            >
+                              {sendingPayment[order.id] ? "Sending…" : "Resend link"}
+                            </button>
                           )}
-                          <Detail
-                            label="Notes"
-                            value={order.notes || "None"}
-                          />
-                          <Detail
-                            label="Ordered at"
-                            value={new Date(order.created_at).toLocaleString("en-US")}
-                          />
                         </div>
                       </div>
-                    </td>
-                  </tr>
-                )}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Orders — mobile cards */}
-      <div className="md:hidden space-y-4">
-        {filtered.length === 0 && (
-          <div className="card text-center py-10">
-            <p className="font-im-fell italic text-plum/50">No orders found.</p>
-          </div>
-        )}
-        {filtered.map((order) => (
-          <div key={order.id} className="card space-y-3">
-            {/* Top row */}
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="font-im-fell italic text-plum font-medium text-lg leading-tight">
-                  {order.customer_name}
-                </p>
-                <p className="font-im-fell-sc text-plum/50 text-xs mt-0.5">
-                  {order.reference_number}
-                </p>
-              </div>
-              <span className={`font-im-fell-sc text-xs px-2 py-1 rounded-lg border-2 whitespace-nowrap ${STATUS_COLORS[order.status]}`}>
-                {STATUS_LABELS[order.status]}
-              </span>
-            </div>
-
-            {/* Key details */}
-            <div className="flex gap-4 text-center">
-              <div>
-                <p className="font-cormorant italic text-berry text-2xl font-medium">{order.quantity}</p>
-                <p className="font-im-fell-sc text-plum/50 text-xs capitalize">{order.flavor}</p>
-              </div>
-              <div className="border-l border-border-pink" />
-              <div>
-                <p className="font-cormorant italic text-berry text-2xl font-medium">${order.total_price}</p>
-                <p className="font-im-fell-sc text-plum/50 text-xs">Total</p>
-              </div>
-              <div className="border-l border-border-pink" />
-              <div>
-                <p className="font-cormorant italic text-berry text-2xl font-medium">
-                  {new Date(order.pickup_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                </p>
-                <p className="font-im-fell-sc text-plum/50 text-xs">Pickup</p>
-              </div>
-            </div>
-
-            {/* Status + actions */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <select
-                value={order.status}
-                onChange={(e) => updateStatus(order.id, e.target.value as Status)}
-                className={`font-im-fell-sc text-xs px-2 py-1.5 rounded-lg border-2 outline-none flex-1 ${STATUS_COLORS[order.status]}`}
-              >
-                {Object.entries(STATUS_LABELS).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
-              {order.status === "new" && (
-                <button
-                  onClick={() => sendPaymentRequest(order.id)}
-                  disabled={sendingPayment[order.id]}
-                  className="font-im-fell-sc text-xs px-3 py-1.5 rounded-pill bg-rose/20 text-rose border-2 border-rose/40 hover:bg-rose/30 transition-colors disabled:opacity-60"
-                >
-                  {sendingPayment[order.id] ? "Sending…" : paymentSent[order.id] ? "✓ Sent" : "Send Payment Request"}
-                </button>
-              )}
-              {order.status === "awaiting_payment" && (
-                <button
-                  onClick={() => sendPaymentRequest(order.id)}
-                  disabled={sendingPayment[order.id]}
-                  className="font-im-fell-sc text-xs px-3 py-1.5 rounded-pill bg-orange-100 text-orange-800 border-2 border-orange-200 hover:bg-orange-200 transition-colors disabled:opacity-60"
-                >
-                  {sendingPayment[order.id] ? "Sending…" : "Resend Link"}
-                </button>
+                    ))
+                  )}
+                </div>
               )}
             </div>
+          );
+        })}
 
-            {/* Expand toggle */}
+        {/* Cancelled — always collapsed, only shown if any exist */}
+        {cancelledOrders.length > 0 && (
+          <div className="rounded-2xl overflow-hidden" style={{ border: "1.5px solid #FCA5A5" }}>
             <button
-              onClick={() => setExpandedId(expandedId === order.id ? null : order.id)}
-              className="font-im-fell-sc text-xs text-plum/50 hover:text-rose transition-colors uppercase tracking-widest w-full text-center pt-1"
+              onClick={() => toggleBucket("Cancelled")}
+              className="w-full flex items-center gap-3 px-5 py-3 text-left"
+              style={{ backgroundColor: openBuckets["Cancelled"] ? "#FEF2F2" : "#FDFAF7" }}
             >
-              {expandedId === order.id ? "▲ Hide details" : "▼ Show details"}
+              <svg
+                width="12" height="12" viewBox="0 0 12 12" fill="none"
+                className="flex-shrink-0 transition-transform duration-200"
+                style={{ transform: openBuckets["Cancelled"] ? "rotate(90deg)" : "rotate(0deg)", color: "#991B1B" }}
+              >
+                <path d="M4 2L8 6L4 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="font-cormorant italic text-xl" style={{ color: "#991B1B" }}>Cancelled</span>
+              <span className="font-sans text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: "#FCA5A5", color: "#991B1B" }}>
+                {cancelledOrders.length}
+              </span>
             </button>
-
-            {/* Expanded details */}
-            {expandedId === order.id && (
-              <div className="border-t border-dashed border-border-pink pt-3 space-y-2">
-                <Detail label="Email" value={order.customer_email} />
-                <Detail label="Phone" value={order.customer_phone} />
-                <Detail label="Icing" value={order.icing_colors?.join(", ") || "—"} />
-                <Detail label="Topper" value={order.topper ? (order.topper_description ?? "Yes") : "No"} />
-                <Detail label="Extras" value={order.sprinkles_or_glitter ?? "None"} />
-                {order.delivery_address && <Detail label="Address" value={order.delivery_address} />}
-                <Detail label="Notes" value={order.notes || "None"} />
+            {openBuckets["Cancelled"] && (
+              <div style={{ backgroundColor: "#FDFAF7" }}>
+                {cancelledOrders.map((order, i) => (
+                  <div
+                    key={order.id}
+                    onClick={() => setDrawerOrder(order)}
+                    className="flex items-center gap-4 px-5 py-3.5 cursor-pointer opacity-60"
+                    style={{ borderTop: i > 0 ? "1px solid #EDE8E3" : "1px solid #FCA5A5" }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-cormorant italic text-lg truncate" style={{ color: "#3D2B1F" }}>{order.customer_name}</p>
+                      <p className="font-sans text-xs" style={{ color: "#A08880" }}>{order.reference_number}</p>
+                    </div>
+                    <p className="font-sans text-sm hidden sm:block" style={{ color: "#5C4A3D" }}>{formatPickup(order.pickup_date)}</p>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        ))}
+        )}
       </div>
-    </div>
-  );
-}
 
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex gap-2">
-      <span className="font-im-fell-sc text-plum/50 text-xs uppercase tracking-wide w-28 shrink-0">
-        {label}
-      </span>
-      <span className="font-im-fell italic text-plum text-sm">{value}</span>
+      {/* Order drawer */}
+      {drawerOrder && (
+        <AdminOrderDrawer
+          order={drawerOrder as DrawerOrder}
+          onClose={() => setDrawerOrder(null)}
+          onStatusChange={handleStatusChange}
+        />
+      )}
     </div>
   );
 }
