@@ -13,36 +13,27 @@ export default async function ProductionPage() {
   } = await supabase.auth.getSession();
   if (!session) redirect("/admin/login");
 
+  const threeWeeksOut = new Date();
+  threeWeeksOut.setDate(threeWeeksOut.getDate() + 21);
+
   const { data: orders } = await supabase
     .from("orders")
-    .select("id, reference_number, customer_name, pickup_date, quantity, flavor, status")
-    .neq("status", "cancelled")
+    .select(
+      "id, reference_number, customer_name, pickup_date, pickup_time, quantity, flavor, status, icing_colors, topper, topper_description"
+    )
+    .not("status", "in", '("delivered","cancelled")')
+    .lte("pickup_date", threeWeeksOut.toISOString().slice(0, 10))
     .order("pickup_date", { ascending: true });
 
-  const now = new Date();
-  const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay());
-  weekStart.setHours(0, 0, 0, 0);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  weekEnd.setHours(23, 59, 59, 999);
-
-  const weekStartStr = weekStart.toISOString().slice(0, 10);
-  const weekEndStr = weekEnd.toISOString().slice(0, 10);
-
-  const thisWeek = (orders ?? []).filter(
-    (o) => o.pickup_date >= weekStartStr && o.pickup_date <= weekEndStr
-  );
-
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="font-cormorant italic text-berry text-4xl font-medium">Production</h1>
-        <p className="font-im-fell italic text-plum/60 text-sm mt-1">
-          Jo&apos;s Cupcakes — Bakery ops
-        </p>
-      </div>
-      <AdminBakePlan orders={thisWeek} />
+    <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="font-cormorant italic text-berry text-4xl font-medium">Production</h1>
+          <p className="font-sans text-sm mt-1" style={{ color: "#8C7B74" }}>
+            Jo&apos;s Cupcakes
+          </p>
+        </div>
+        <AdminBakePlan orders={orders ?? []} />
     </div>
   );
 }
