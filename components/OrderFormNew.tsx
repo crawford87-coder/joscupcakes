@@ -245,20 +245,20 @@ export default function OrderForm() {
 
   // ── Summary items ─────────────────────────────────────────
 
-  const summaryItems = [
-    { label: "Quantity", value: `${qty} cupcakes`, price: `$${PRICES[qty]}` },
-    { label: "Flavour", value: FLAVOR_LABELS[flavor] ?? flavor },
+  const summaryItems: { label: string; value: string; suffix?: string }[] = [
+    { label: "Quantity", value: `${qty} cupcakes`, suffix: `$${PRICES[qty]}` },
+    { label: "Flavour",  value: FLAVOR_LABELS[flavor] ?? flavor },
     ...(frostingType ? [{ label: "Frosting", value: FROSTING_LABELS[frostingType] ?? frostingType }] : []),
     ...(frostingColorNote ? [{ label: "Colors", value: frostingColorNote }] : []),
     ...(topperKind === "paper"
-      ? [{ label: "Topper", value: "Paper topper (+$0.50 each)", price: `+$${(0.5 * qty).toFixed(2).replace(".00", "")}` }]
+      ? [{ label: "Topper", value: "Paper topper",  suffix: `+$${(0.5 * qty).toFixed(2).replace(".00", "")}` }]
       : topperKind === "toy"
-      ? [{ label: "Topper", value: "Toy topper (+$1.50 each)", price: `+$${(1.5 * qty).toFixed(2).replace(".00", "")}` }]
+      ? [{ label: "Topper", value: "Toy topper",    suffix: `+$${(1.5 * qty).toFixed(2).replace(".00", "")}` }]
       : topperKind === "custom"
-      ? [{ label: "Topper", value: "Custom topper (Jo will quote)" }]
+      ? [{ label: "Topper", value: "Custom topper", suffix: "Jo will quote" }]
       : []),
     ...(form.fulfillment === "delivery"
-      ? [{ label: "Delivery", value: "Austin ISD area", price: `+$${ADDON_DELIVERY}` }]
+      ? [{ label: "Delivery", value: "Austin ISD area", suffix: `+$${ADDON_DELIVERY}` }]
       : []),
   ];
 
@@ -280,54 +280,57 @@ export default function OrderForm() {
 
       {/* ── Order summary ──────────────────────────────────── */}
       <section
-        className="rounded-3xl p-7 space-y-4"
+        className="rounded-3xl p-6"
         style={{ backgroundColor: "#F5F0E8", border: "1px solid #E8DDD4" }}
       >
-        <h2 className="font-caveat text-2xl" style={{ color: "#3D2B1F" }}>
+        <h2 className="font-cormorant italic font-medium text-2xl mb-4" style={{ color: "#3D2B1F" }}>
           Your cupcake ✦
         </h2>
-        <ul className="space-y-2">
-          {summaryItems.map(({ label, value, price }) => (
+
+        <ul className="space-y-2.5">
+          {summaryItems.map(({ label, value, suffix }) => (
             <li key={label} className="flex items-baseline justify-between gap-4">
-              <span className="font-im-fell italic text-sm opacity-50" style={{ color: "#6B5C52" }}>
+              <span className="font-sans text-[15px]" style={{ color: "#5C4A3D" }}>
                 {label}
               </span>
-              <span className="flex items-center gap-3">
-                <span className="font-caveat text-base" style={{ color: "#3D2B1F" }}>
-                  {value}
-                </span>
-                {price && (
-                  <span className="font-caveat text-sm" style={{ color: "#D4788E" }}>
-                    {price}
-                  </span>
+              <span className="font-sans text-[15px] text-right" style={{ color: "#3D2B1F" }}>
+                {value}
+                {suffix && (
+                  <span className="ml-1.5 text-xs" style={{ color: "#9E8F85" }}>{suffix}</span>
                 )}
               </span>
             </li>
           ))}
         </ul>
-        <div
-          className="mt-4 pt-4 flex items-baseline justify-between"
-          style={{ borderTop: "1px dashed #C4AED8" }}
-        >
-          <span className="font-caveat text-sm opacity-60" style={{ color: "#6B5C52" }}>
+
+        <div className="my-4" style={{ height: 1, backgroundColor: "rgba(107,80,68,0.12)" }} />
+
+        <div className="flex items-baseline justify-between">
+          <span className="font-cormorant italic text-lg" style={{ color: "#3D2B1F" }}>
             Estimated total
           </span>
-          <span className="font-cormorant italic font-medium text-4xl" style={{ color: "#D4788E" }}>
-            ${total}
-          </span>
+          <div className="text-right">
+            <span className="font-cormorant italic font-medium text-3xl" style={{ color: "#D4788E" }}>
+              ${total}
+            </span>
+            <p className="font-sans italic text-[12px] mt-0.5" style={{ color: "#9E8F85" }}>
+              Jo will confirm the final price in her reply
+            </p>
+          </div>
         </div>
-        <p className="font-im-fell italic text-xs opacity-50 text-center" style={{ color: "#6B5C52" }}>
-          Jo will confirm the final price in her reply
-        </p>
       </section>
 
       {/* ── Lead time notice ────────────────────────────────── */}
       <div
-        className="rounded-2xl px-5 py-3 text-center"
-        style={{ backgroundColor: "#F2C9A8", border: "1px solid #E8C4A0" }}
+        className="flex items-start gap-2.5 px-4 py-2.5 rounded-r-lg"
+        style={{ backgroundColor: "rgba(242,201,168,0.22)", borderLeft: "3px solid #B87A5A" }}
       >
-        <p className="font-im-fell italic text-sm" style={{ color: "#5C3D2B" }}>
-          72 hours minimum · 1 week for 24 or more cupcakes
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" className="flex-shrink-0 mt-px" style={{ color: "#B87A5A" }} aria-hidden="true">
+          <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M8 4.5V8L10.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <p className="font-sans text-[13px] leading-snug" style={{ color: "#5C3D2B" }}>
+          72 hours minimum lead time · 1 week for orders of 24 or more cupcakes
         </p>
       </div>
 
