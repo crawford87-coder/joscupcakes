@@ -49,10 +49,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    await supabase
+    const { error: updateError } = await supabase
       .from("orders")
       .update({ status: "confirmed" })
       .eq("id", orderId);
+
+    if (updateError) {
+      console.error("Failed to update order status to confirmed:", orderId, updateError.message);
+    } else {
+      console.log("Order confirmed:", orderId, order.reference_number);
+    }
 
     try {
       const emailPayload: NewOrderEmailPayload = {
