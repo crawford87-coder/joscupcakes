@@ -1,12 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
+function getBaseUrl(req: NextRequest) {
+  const configuredSiteUrl = process.env.SITE_URL?.trim();
+  if (configuredSiteUrl && /^https?:\/\//i.test(configuredSiteUrl)) {
+    return configuredSiteUrl.replace(/\/$/, "");
+  }
+
+  const forwardedHost = req.headers.get("x-forwarded-host");
+  const forwardedProto = req.headers.get("x-forwarded-proto");
+  if (forwardedHost) {
+    return `${forwardedProto ?? "https"}://${forwardedHost}`;
+  }
+
+  const host = req.headers.get("host");
+  if (host) {
+    const proto = req.nextUrl.protocol.replace(/:$/, "") || "https";
+    return `${proto}://${host}`;
+  }
+
+  return req.nextUrl.origin;
+}
+
 export async function GET(req: NextRequest) {
-  const { searchParams, origin } = new URL(req.url);
+  const { searchParams } = new URL(req.url);
+  const baseUrl = getBaseUrl(req);
   const code = searchParams.get("code");
 
   if (code) {
-    const res = NextResponse.redirect(`${origin}/admin`);
+    const res = NextResponse.redirect(`${baseUrl}/admin`);
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -28,5 +50,5 @@ export async function GET(req: NextRequest) {
   }
 
   // Something went wrong — send back to login
-  return NextResponse.redirect(`${origin}/admin/login?error=auth`);
+  return NextResponse.redirect(`${baseUrl}/admin/login?error=auth`);
 }

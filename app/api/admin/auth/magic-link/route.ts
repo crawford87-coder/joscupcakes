@@ -22,6 +22,18 @@ function getBaseUrl(req: NextRequest) {
     return configuredSiteUrl.replace(/\/$/, "");
   }
 
+  const forwardedHost = req.headers.get("x-forwarded-host");
+  const forwardedProto = req.headers.get("x-forwarded-proto");
+  if (forwardedHost) {
+    return `${forwardedProto ?? "https"}://${forwardedHost}`;
+  }
+
+  const host = req.headers.get("host");
+  if (host) {
+    const proto = req.nextUrl.protocol.replace(/:$/, "") || "https";
+    return `${proto}://${host}`;
+  }
+
   return req.nextUrl.origin;
 }
 
