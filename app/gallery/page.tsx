@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 
 export const metadata = {
   title: "Gallery — Jo's Cupcakes",
@@ -9,7 +9,7 @@ export const metadata = {
 export const revalidate = 3600; // re-fetch at most once per hour
 
 export default async function GalleryPage() {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { data: images } = await supabase
     .from("gallery_images")
     .select("id, url, caption")
