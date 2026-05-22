@@ -3,6 +3,27 @@ import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 import { sendPaymentRequestEmail } from "@/lib/email";
 
+function getBaseUrl(req: NextRequest) {
+  const configuredSiteUrl = process.env.SITE_URL?.trim();
+  if (configuredSiteUrl && /^https?:\/\//i.test(configuredSiteUrl)) {
+    return configuredSiteUrl.replace(/\/$/, "");
+  }
+
+  const forwardedHost = req.headers.get("x-forwarded-host");
+  const forwardedProto = req.headers.get("x-forwarded-proto");
+  if (forwardedHost) {
+    return `${forwardedProto ?? "https"}://${forwardedHost}`;
+  }
+
+  const host = req.headers.get("host");
+  if (host) {
+    const proto = req.nextUrl.protocol.replace(/:$/, "") || "https";
+    return `${proto}://${host}`;
+  }
+
+  return req.nextUrl.origin;
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -34,7 +55,7 @@ export async function POST(
     );
   }
 
-  const origin = req.nextUrl.origin;
+  const baseUrl = getBaseUrl(req);
   const totalPrice = Number(order.total_price);
 
   // Orders over $80 → 50% deposit; under $80 → full payment
@@ -66,8 +87,8 @@ export async function POST(
       orderId: order.id,
       referenceNumber: order.reference_number,
     },
-    success_url: `${origin}/order/payment-success?ref=${order.reference_number}`,
-    cancel_url: `${origin}/order/payment-cancelled?ref=${order.reference_number}`,
+    success_url: `${baseUrl}/order/payment-success?ref=${order.reference_number}`,
+    cancel_url: `${baseUrl}/order/payment-cancelled?ref=${order.reference_number}`,
   });
 
   // Update order with session ID and status
@@ -77,6 +98,8 @@ export async function POST(
     .eq("id", order.id);
 
   // Email the customer the payment link
+  let emailSent = true;
+  let emailError: string | null = null;
   try {
     await sendPaymentRequestEmail({
       customerName: order.customer_name,
@@ -90,9 +113,11 @@ export async function POST(
       paymentUrl: checkoutSession.url!,
       pickupDate: order.pickup_date,
     });
-  } catch (emailErr) {
-    console.error("Payment request email error:", emailErr);
+  } catch (err) {
+    emailSent = false;
+    emailError = err instanceof Error ? err.message : String(err);
+    console.error("Payment request email error:", err);
   }
 
-  return NextResponse.json({ url: checkoutSession.url });
+  return NextResponse.json({ url: checkoutSession.url, emailSent, emailError });
 }

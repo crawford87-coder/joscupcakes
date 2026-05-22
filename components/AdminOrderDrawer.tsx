@@ -93,6 +93,7 @@ export default function AdminOrderDrawer({
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [sendingPayment, setSendingPayment] = useState(false);
+  const [paymentEmailWarning, setPaymentEmailWarning] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(initialOrder.delivery_photo_url ?? null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const threadEndRef = useRef<HTMLDivElement>(null);
@@ -155,12 +156,21 @@ export default function AdminOrderDrawer({
 
   async function handleSendPaymentRequest() {
     setSendingPayment(true);
+    setPaymentEmailWarning(null);
     const res = await fetch(`/api/admin/orders/${order.id}/payment-link`, {
       method: "POST",
     });
     if (res.ok) {
+      const data = await res.json().catch(() => ({}));
       setOrder((o) => ({ ...o, status: "awaiting_payment" }));
       onStatusChange(order.id, "awaiting_payment");
+      if (data.emailSent === false) {
+        setPaymentEmailWarning(
+          `Payment link created but the email failed to send. Copy the link manually: ${data.url ?? ""}`
+        );
+      }
+    } else {
+      setPaymentEmailWarning("Failed to create payment link. Please try again.");
     }
     setSendingPayment(false);
   }
@@ -365,6 +375,11 @@ export default function AdminOrderDrawer({
               >
                 {sendingPayment ? "Sending…" : paymentButtonLabel}
               </button>
+            )}
+            {paymentEmailWarning && (
+              <p className="w-full font-im-fell italic text-amber-700 text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-1">
+                ⚠ {paymentEmailWarning}
+              </p>
             )}
             {["confirmed", "in_progress", "ready"].includes(order.status) && (
               <button
