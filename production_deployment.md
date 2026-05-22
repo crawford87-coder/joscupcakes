@@ -8,7 +8,7 @@ This project is a Next.js 15 app intended to run on Capek-Web behind nginx with 
 - Framework: Next.js 15 App Router
 - Process manager: PM2
 - Reverse proxy: nginx
-- External services: Supabase, Gmail SMTP, Stripe
+- External services: Supabase, PrivateEmail SMTP, Stripe
 
 ## 1. Pre-deploy Checklist
 
@@ -41,9 +41,14 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 JO_EMAIL=
 ADMIN_EMAIL_FROM=
+ADMIN_ALLOWED_EMAILS=
 
-GMAIL_USER=
-GMAIL_APP_PASSWORD=
+SMTP_HOST=mail.privateemail.com
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+CONTACT_EMAIL=
 
 SITE_URL=https://your-domain.com
 

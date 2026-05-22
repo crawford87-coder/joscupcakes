@@ -24,7 +24,7 @@ export interface DrawerOrder {
   delivery_photo_url?: string | null;
 }
 
-interface GmailMessage {
+interface EmailMessage {
   id: string;
   from: string;
   date: string;
@@ -89,10 +89,7 @@ export default function AdminOrderDrawer({
   onStatusChange: (id: string, status: string) => void;
 }) {
   const [order, setOrder] = useState(initialOrder);
-  const [gmailConnected, setGmailConnected] = useState<boolean | null>(null);
-  const [messages, setMessages] = useState<GmailMessage[]>([]);
-  const [threadId, setThreadId] = useState<string | null>(null);
-  const [loadingThread, setLoadingThread] = useState(false);
+  const [messages, setMessages] = useState<EmailMessage[]>([]);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [sendingPayment, setSendingPayment] = useState(false);
@@ -103,24 +100,6 @@ export default function AdminOrderDrawer({
 
   // Sync if parent updates the order
   useEffect(() => { setOrder(initialOrder); }, [initialOrder]);
-
-  useEffect(() => {
-    fetch("/api/gmail/status")
-      .then((r) => r.json())
-      .then((d) => setGmailConnected(d.connected as boolean));
-  }, []);
-
-  useEffect(() => {
-    if (!gmailConnected) return;
-    setLoadingThread(true);
-    fetch(`/api/gmail/thread?orderId=${order.id}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setMessages(d.messages ?? []);
-        setThreadId(d.threadId ?? null);
-      })
-      .finally(() => setLoadingThread(false));
-  }, [gmailConnected, order.id]);
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -136,41 +115,39 @@ export default function AdminOrderDrawer({
     onStatusChange(order.id, status);
   }
 
-  async function refreshThread() {
-    const res = await fetch(`/api/gmail/thread?orderId=${order.id}`);
-    const d = await res.json();
-    setMessages(d.messages ?? []);
-    setThreadId(d.threadId ?? null);
-  }
-
   async function handleSend() {
     if (!replyText.trim() || sending) return;
     setSending(true);
 
     const subject = `Re: Your Jo's Cupcakes order ${order.reference_number}`;
-    const htmlBody = `<p style="font-family:Georgia,serif;font-size:15px;color:#3D2B1F;line-height:1.7">${replyText.replace(/\n/g, "<br>")}</p>`;
+    const messageText = replyText.trim();
+    const htmlBody = `<p style="font-family:Georgia,serif;font-size:15px;color:#3D2B1F;line-height:1.7">${messageText.replace(/\n/g, "<br>")}</p>`;
 
-    const res = await fetch("/api/gmail/send", {
+    const res = await fetch("/api/email/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        orderId: order.id,
         to: order.customer_email,
         subject,
         htmlBody,
-        threadId: threadId ?? undefined,
       }),
     });
 
     if (res.ok) {
-      const data = await res.json();
-      setThreadId(data.threadId);
       setReplyText("");
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}`,
+          from: "Jo",
+          date: new Date().toISOString(),
+          body: messageText,
+          isFromJo: true,
+        },
+      ]);
 
       // First reply from New → Quoting
       if (order.status === "new") await patchStatus("quoting");
-
-      await refreshThread();
     }
 
     setSending(false);
@@ -405,38 +382,17 @@ export default function AdminOrderDrawer({
               Email thread
             </p>
 
-            {gmailConnected === null && (
-              <p className="font-im-fell italic text-plum/30 text-sm">Loading…</p>
-            )}
+            <p className="font-im-fell italic text-plum/30 text-xs mb-3">
+              SMTP mode is active. Incoming mailbox sync is disabled, but you can send replies here.
+            </p>
 
-            {gmailConnected === false && (
-              <div
-                className="rounded-xl p-5 text-center"
-                style={{ border: "2px dashed #E8DDD4" }}
-              >
-                <p className="font-im-fell italic text-plum/50 text-sm mb-3">
-                  Connect Gmail to read and reply to emails
-                </p>
-                <a
-                  href="/api/gmail/auth"
-                  className="font-im-fell-sc text-xs px-4 py-2 rounded-pill bg-rose/15 text-rose border-2 border-rose/30 hover:bg-rose/25 transition-colors inline-block"
-                >
-                  Connect Gmail
-                </a>
-              </div>
-            )}
-
-            {gmailConnected === true && loadingThread && (
-              <p className="font-im-fell italic text-plum/30 text-sm">Loading thread…</p>
-            )}
-
-            {gmailConnected === true && !loadingThread && messages.length === 0 && (
+            {messages.length === 0 && (
               <p className="font-im-fell italic text-plum/30 text-sm">
-                No emails found for this order yet.
+                No messages in this panel yet.
               </p>
             )}
 
-            {gmailConnected === true && !loadingThread && messages.length > 0 && (
+            {messages.length > 0 && (
               <div className="space-y-2.5">
                 {messages.map((msg) => (
                   <div
@@ -467,68 +423,66 @@ export default function AdminOrderDrawer({
         </div>
 
         {/* ── Reply area ── */}
-        {gmailConnected === true && (
-          <div
-            className="flex-shrink-0 px-5 py-4 space-y-3"
-            style={{ borderTop: "1px solid #E8DDD4", backgroundColor: "#FAF7F2" }}
-          >
-            {/* Template buttons */}
-            <div className="flex flex-wrap gap-1.5">
-              {templates.map((t) => (
-                <button
-                  key={t.label}
-                  onClick={() => setReplyText(t.text)}
-                  className="font-im-fell-sc text-xs px-3 py-1.5 rounded-pill border-2 border-border-pink text-plum/55 hover:border-rose hover:text-rose transition-colors"
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Compose */}
-            <textarea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSend();
-              }}
-              placeholder="Write a reply… (⌘↵ to send)"
-              rows={4}
-              className="w-full font-im-fell italic text-plum text-sm rounded-xl px-3.5 py-2.5 outline-none placeholder:text-plum/25 resize-none"
-              style={{ border: "2px solid #E8DDD4", backgroundColor: "#FDFAF7" }}
-              onFocus={(e) =>
-                (e.currentTarget.style.borderColor = "#B5588C")
-              }
-              onBlur={(e) =>
-                (e.currentTarget.style.borderColor = "#E8DDD4")
-              }
-            />
-
-            <div className="flex items-center justify-between">
-              <span className="font-im-fell-sc text-xs text-plum/30">
-                To: {order.customer_email}
-              </span>
+        <div
+          className="flex-shrink-0 px-5 py-4 space-y-3"
+          style={{ borderTop: "1px solid #E8DDD4", backgroundColor: "#FAF7F2" }}
+        >
+          {/* Template buttons */}
+          <div className="flex flex-wrap gap-1.5">
+            {templates.map((t) => (
               <button
-                onClick={handleSend}
-                disabled={!replyText.trim() || sending}
-                className="font-im-fell-sc text-xs px-5 py-2.5 rounded-pill transition-colors disabled:opacity-35"
-                style={{ backgroundColor: "#B5588C", color: "#fff" }}
-                onMouseEnter={(e) =>
-                  !sending && replyText.trim() && ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#8B3D6B")
-                }
-                onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#B5588C")
-                }
+                key={t.label}
+                onClick={() => setReplyText(t.text)}
+                className="font-im-fell-sc text-xs px-3 py-1.5 rounded-pill border-2 border-border-pink text-plum/55 hover:border-rose hover:text-rose transition-colors"
               >
-                {sending
-                  ? "Sending…"
-                  : order.status === "new"
-                  ? "Reply → Quoting"
-                  : "Send reply"}
+                {t.label}
               </button>
-            </div>
+            ))}
           </div>
-        )}
+
+          {/* Compose */}
+          <textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSend();
+            }}
+            placeholder="Write a reply... (Ctrl/Cmd+Enter to send)"
+            rows={4}
+            className="w-full font-im-fell italic text-plum text-sm rounded-xl px-3.5 py-2.5 outline-none placeholder:text-plum/25 resize-none"
+            style={{ border: "2px solid #E8DDD4", backgroundColor: "#FDFAF7" }}
+            onFocus={(e) =>
+              (e.currentTarget.style.borderColor = "#B5588C")
+            }
+            onBlur={(e) =>
+              (e.currentTarget.style.borderColor = "#E8DDD4")
+            }
+          />
+
+          <div className="flex items-center justify-between">
+            <span className="font-im-fell-sc text-xs text-plum/30">
+              To: {order.customer_email}
+            </span>
+            <button
+              onClick={handleSend}
+              disabled={!replyText.trim() || sending}
+              className="font-im-fell-sc text-xs px-5 py-2.5 rounded-pill transition-colors disabled:opacity-35"
+              style={{ backgroundColor: "#B5588C", color: "#fff" }}
+              onMouseEnter={(e) =>
+                !sending && replyText.trim() && ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#8B3D6B")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#B5588C")
+              }
+            >
+              {sending
+                ? "Sending..."
+                : order.status === "new"
+                ? "Reply -> Quoting"
+                : "Send reply"}
+            </button>
+          </div>
+        </div>
       </div>
     </>
   );

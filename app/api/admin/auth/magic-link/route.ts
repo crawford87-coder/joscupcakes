@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 function getAllowedAdminEmails() {
-  const configuredEmails = process.env.ADMIN_ALLOWED_EMAILS ?? process.env.JO_EMAIL ?? "";
+  const configuredEmails = process.env.ADMIN_ALLOWED_EMAILS
+    ?? process.env.CONTACT_EMAIL
+    ?? process.env.ADMIN_EMAIL_FROM
+    ?? process.env.SMTP_USER
+    ?? process.env.JO_EMAIL
+    ?? "";
   return new Set(
     configuredEmails
       .split(",")

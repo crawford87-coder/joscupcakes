@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import AdminOrderDrawer, { DrawerOrder } from "@/components/AdminOrderDrawer";
@@ -114,16 +114,8 @@ export default function AdminDashboard({ orders: initialOrders }: { orders: Orde
   );
   const [drawerOrder, setDrawerOrder] = useState<Order | null>(null);
   const [sendingPayment, setSendingPayment] = useState<Record<string, boolean>>({});
-  const [gmailConnected, setGmailConnected] = useState<boolean | null>(null);
   const router = useRouter();
   const supabase = createClient();
-
-  useEffect(() => {
-    fetch("/api/gmail/status")
-      .then((r) => r.json())
-      .then((d) => setGmailConnected(d.connected as boolean))
-      .catch(() => setGmailConnected(false));
-  }, []);
 
   function toggleBucket(label: string) {
     setOpenBuckets((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -170,27 +162,6 @@ export default function AdminDashboard({ orders: initialOrders }: { orders: Orde
           Sign out
         </button>
       </div>
-
-      {/* Gmail connection banner */}
-      {gmailConnected === false && (
-        <div
-          className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 mb-6"
-          style={{ backgroundColor: "#FDF5F7", border: "1px solid #EECAD4" }}
-        >
-          <p className="font-sans text-sm" style={{ color: "#8B3D52" }}>
-            Gmail not connected — you won&apos;t be able to read or reply to customer emails from here.
-          </p>
-          <a
-            href="/api/gmail/auth"
-            className="font-sans text-xs px-3 py-1.5 rounded-full flex-shrink-0 transition-colors"
-            style={{ borderColor: "#C4607A", color: "#C4607A", border: "1px solid #C4607A" }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.backgroundColor = "#FEF0F4")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.backgroundColor = "")}
-          >
-            Connect Gmail
-          </a>
-        </div>
-      )}
 
       {/* Buckets */}
       <div className="space-y-3">

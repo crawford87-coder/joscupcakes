@@ -1,10 +1,34 @@
 import nodemailer from "nodemailer";
 
 function getTransporter() {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-  if (!user || !pass) throw new Error("GMAIL_USER or GMAIL_APP_PASSWORD is not set");
-  return nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
+  const host = process.env.SMTP_HOST;
+  const portRaw = process.env.SMTP_PORT;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!host || !portRaw || !user || !pass) {
+    throw new Error("SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS must be set");
+  }
+
+  const port = Number(portRaw);
+  if (!Number.isFinite(port)) {
+    throw new Error("SMTP_PORT must be a valid number");
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+}
+
+function getFromEmail() {
+  return process.env.SMTP_FROM
+    ?? process.env.SMTP_USER
+    ?? process.env.ADMIN_EMAIL_FROM
+    ?? process.env.CONTACT_EMAIL
+    ?? "admin@joscupcakes.com";
 }
 
 // ─── HTML helpers ─────────────────────────────────────────────────────────
@@ -92,8 +116,8 @@ export interface NewOrderEmailPayload {
 // ─── 1. New order alert (to Jo) ───────────────────────────────────────────
 
 export async function sendNewOrderEmail(order: NewOrderEmailPayload) {
-  const joEmail = process.env.JO_EMAIL ?? "jo@joscupcakes.com";
-  const fromEmail = process.env.GMAIL_USER ?? "jo@joscupcakes.com";
+  const joEmail = process.env.CONTACT_EMAIL ?? process.env.JO_EMAIL ?? "admin@joscupcakes.com";
+  const fromEmail = getFromEmail();
   const adminUrl = `${process.env.SITE_URL ?? "https://joscupcakes.com"}/admin`;
 
   const html = emailWrapper(`
@@ -127,7 +151,7 @@ export async function sendNewOrderEmail(order: NewOrderEmailPayload) {
 // ─── 2. Confirmation email (to customer, after payment) ───────────────────
 
 export async function sendConfirmationEmail(order: NewOrderEmailPayload) {
-  const fromEmail = process.env.GMAIL_USER ?? "jo@joscupcakes.com";
+  const fromEmail = getFromEmail();
 
   const deadline = new Date(new Date(order.pickupDate).getTime() - 48 * 60 * 60 * 1000)
     .toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -176,7 +200,7 @@ export interface ReminderEmailPayload {
 }
 
 export async function sendReminderEmail(payload: ReminderEmailPayload) {
-  const fromEmail = process.env.GMAIL_USER ?? "jo@joscupcakes.com";
+  const fromEmail = getFromEmail();
   const childLine = payload.childName ? `${payload.childName}'s` : "the";
 
   const html = emailWrapper(`
@@ -224,7 +248,7 @@ export async function sendPaymentRequestEmail({
   paymentUrl: string;
   pickupDate: string;
 }) {
-  const fromEmail = process.env.GMAIL_USER ?? "jo@joscupcakes.com";
+  const fromEmail = getFromEmail();
   const amountDue = isDeposit ? depositAmount : totalPrice;
   const formattedPickup = new Date(pickupDate + "T12:00:00").toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric",
@@ -258,5 +282,24 @@ export async function sendPaymentRequestEmail({
     subject: `Your order is ready — complete your payment ✦ ${referenceNumber}`,
     html,
     text: `Hi ${customerName},\n\nYour order is ready!\n\n${quantity} ${flavor} cupcakes\nPickup: ${formattedPickup}\nAmount due: $${amountDue}${isDeposit ? ` (50% deposit — remaining $${totalPrice - depositAmount} due 24h before pickup)` : ""}\n\nPay here: ${paymentUrl}\n\nRef: ${referenceNumber}\n\n— Jo`,
+  });
+}
+
+export async function sendAdminReplyEmail({
+  to,
+  subject,
+  htmlBody,
+}: {
+  to: string;
+  subject: string;
+  htmlBody: string;
+}) {
+  const fromEmail = getFromEmail();
+
+  await getTransporter().sendMail({
+    from: fromEmail,
+    to,
+    subject,
+    html: htmlBody,
   });
 }
